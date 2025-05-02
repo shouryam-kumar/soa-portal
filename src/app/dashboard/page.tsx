@@ -1,358 +1,266 @@
+// src/app/dashboard/page.tsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { File, Users, Award, Clock, PlusCircle, ArrowRight, Calendar } from 'lucide-react';
-import Sidebar from '@/components/layout/Sidebar';
-import ProposalCard from '@/components/proposals/ProposalCard';
+import type { Database } from '@/types/database.types';
 
-export const dynamic = 'force-dynamic';
-
-export default async function DashboardPage() {
+export default async function Dashboard() {
+  // Properly handle cookies with async await pattern
   const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const supabase = createServerComponentClient<Database>({ 
+    cookies: () => cookieStore 
+  });
   
-  // Get current user
+  // Check if user is authenticated
   const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
   
-  if (!userId) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Sign in to view your dashboard</h2>
-          <Link href="/login">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2">
-              Sign In
-            </button>
+  if (!session) {
+    // Redirect to login if not authenticated
+    redirect('/login');
+  }
+  
+  // Use Promise.all to run parallel queries for better performance
+  const [profileResponse, userProposalsResponse, latestProposalsResponse] = await Promise.all([
+    // Fetch user profile
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single(),
+    
+    // Fetch user's proposals
+    supabase
+      .from('proposals')
+      .select('id, title, status, created_at')
+      .eq('creator_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(5),
+    
+    // Fetch latest proposals
+    supabase
+      .from('proposals')
+      .select('id, title, status, created_at, profiles:creator_id(username, avatar_url)')
+      .order('created_at', { ascending: false })
+      .limit(5)
+  ]);
+  
+  const profile = profileResponse.data;
+  const userProposals = userProposalsResponse.data || [];
+  const latestProposals = latestProposalsResponse.data || [];
+  
+  // Handle case where profile doesn't exist yet
+  if (!profile) {
+    // Redirect to complete profile if needed
+    redirect('/complete-profile');
+  }
+  
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-gray-400">
+            Welcome back, {profile?.username || session.user.email?.split('@')[0] || 'User'}
+          </p>
+        </div>
+        
+        <div className="mt-4 md:mt-0">
+          <Link
+            href="/proposals/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Create New Proposal
           </Link>
         </div>
       </div>
-    );
-  }
-  
-  // Fetch user profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  
-  // Fetch user's proposals
-  const { data: userProposals } = await supabase
-    .from('proposals')
-    .select(`
-      *,
-      profiles:creator_id(username, avatar_url),
-      milestones(*)
-    `)
-    .eq('creator_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(3);
-  
-  // Fetch user's active projects
-  const { data: userProjects } = await supabase
-    .from('projects')
-    .select(`
-      *,
-      proposals(*),
-      project_members!inner(*)
-    `)
-    .eq('project_members.user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(3);
-  
-  // Fetch recent activity (new proposals, projects)
-  const { data: recentProposals } = await supabase
-    .from('proposals')
-    .select(`
-      *,
-      profiles:creator_id(username, avatar_url)
-    `)
-    .neq('creator_id', userId) // Exclude user's own proposals
-    .order('created_at', { ascending: false })
-    .limit(5);
-  
-  // Fetch upcoming deadlines
-  const today = new Date();
-  const { data: upcomingMilestones } = await supabase
-    .from('milestones')
-    .select(`
-      *,
-      proposals!inner(
-        id,
-        title,
-        creator_id,
-        profiles:creator_id(username)
-      )
-    `)
-    .or(`proposals.creator_id.eq.${userId},proposals.creator_id.neq.${userId}`)
-    .gte('deadline', today.toISOString())
-    .order('deadline', { ascending: true })
-    .limit(5);
-  
-  // Format dates
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-  
-  // Calculate days until deadline
-  const getDaysUntil = (dateString: string) => {
-    const deadline = new Date(dateString);
-    const today = new Date();
-    const diffTime = deadline.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  return (
-    <>
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="container mx-auto px-6 py-8">
-          <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* User Profile Card */}
+        <div className="bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4">Your Profile</h2>
           
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-              <div className="flex items-center">
-                <div className="bg-blue-500/20 p-3 rounded-lg">
-                  <File className="text-blue-500" size={24} />
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xl font-bold">
+                    {(profile?.username?.charAt(0) || session.user.email?.charAt(0) || 'U').toUpperCase()}
+                  </span>
                 </div>
-                <div className="ml-4">
-                  <p className="text-gray-400 text-sm">My Proposals</p>
-                  <h3 className="text-2xl font-bold">{userProposals?.length || 0}</h3>
-                </div>
-              </div>
+              )}
             </div>
             
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-              <div className="flex items-center">
-                <div className="bg-green-500/20 p-3 rounded-lg">
-                  <Users className="text-green-500" size={24} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-400 text-sm">Active Projects</p>
-                  <h3 className="text-2xl font-bold">{userProjects?.length || 0}</h3>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-              <div className="flex items-center">
-                <div className="bg-purple-500/20 p-3 rounded-lg">
-                  <Award className="text-purple-500" size={24} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-400 text-sm">OKTO Points</p>
-                  <h3 className="text-2xl font-bold">{profile?.okto_points || 0}</h3>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-              <div className="flex items-center">
-                <div className="bg-yellow-500/20 p-3 rounded-lg">
-                  <Clock className="text-yellow-500" size={24} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-400 text-sm">Upcoming Deadlines</p>
-                  <h3 className="text-2xl font-bold">{upcomingMilestones?.length || 0}</h3>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* My Proposals */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">My Proposals</h2>
-                  <Link href="/proposals" className="text-blue-400 hover:text-blue-300 flex items-center text-sm">
-                    View All
-                    <ArrowRight size={16} className="ml-1" />
-                  </Link>
-                </div>
-                
-                {userProposals && userProposals.length > 0 ? (
-                  <div className="space-y-4">
-                    {userProposals.map((proposal) => (
-                      <ProposalCard key={proposal.id} proposal={proposal} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-gray-700 border border-gray-600 border-dashed rounded-lg p-6 text-center">
-                    <p className="text-gray-400 mb-4">You haven't created any proposals yet</p>
-                    <Link href="/proposals/new">
-                      <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 flex items-center justify-center mx-auto">
-                        <PlusCircle size={16} className="mr-2" />
-                        Create New Proposal
-                      </button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-              
-              {/* Recent Activity */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-                
-                {recentProposals && recentProposals.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentProposals.map((proposal) => (
-                      <div key={proposal.id} className="bg-gray-700 rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              proposal.type === 'project' 
-                                ? 'bg-blue-900 text-blue-300' 
-                                : 'bg-purple-900 text-purple-300'
-                            } mr-2`}>
-                              {proposal.type.charAt(0).toUpperCase() + proposal.type.slice(1)}
-                            </span>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              proposal.status === 'approved' ? 'bg-green-900 text-green-300' :
-                              proposal.status === 'submitted' ? 'bg-yellow-900 text-yellow-300' :
-                              'bg-gray-600 text-gray-300'
-                            }`}>
-                              {proposal.status}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-400">{formatDate(proposal.created_at)}</span>
-                        </div>
-                        
-                        <Link href={`/proposals/${proposal.id}`}>
-                          <h3 className="font-medium mb-2 hover:text-blue-400">{proposal.title}</h3>
-                        </Link>
-                        
-                        <p className="text-gray-400 text-sm mb-2">{proposal.short_description}</p>
-                        
-                        <div className="flex items-center text-sm text-gray-400">
-                          <span>by {proposal.profiles?.username || 'Unknown User'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-center py-6">No recent activity</div>
-                )}
-              </div>
-            </div>
-            
-            {/* Right Column */}
-            <div className="space-y-6">
-              {/* Upcoming Deadlines */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Upcoming Deadlines</h2>
-                
-                {upcomingMilestones && upcomingMilestones.length > 0 ? (
-                  <div className="space-y-3">
-                    {upcomingMilestones.map((milestone) => {
-                      const daysUntil = getDaysUntil(milestone.deadline);
-                      const isUrgent = daysUntil <= 3;
-                      
-                      return (
-                        <div 
-                          key={milestone.id} 
-                          className={`border-l-4 ${
-                            isUrgent ? 'border-red-500' : 'border-yellow-500'
-                          } bg-gray-700 rounded-r-lg p-4`}
-                        >
-                          <Link href={`/proposals/${milestone.proposals.id}`}>
-                            <h4 className="font-medium hover:text-blue-400">{milestone.title}</h4>
-                          </Link>
-                          <p className="text-sm text-gray-400 mb-2">
-                            For: {milestone.proposals.title}
-                          </p>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center text-sm">
-                              <Calendar size={14} className="mr-1 text-gray-500" />
-                              <span>{formatDate(milestone.deadline)}</span>
-                            </div>
-                            
-                            <span className={`text-xs font-bold ${
-                              isUrgent ? 'text-red-400' : 'text-yellow-400'
-                            }`}>
-                              {daysUntil} {daysUntil === 1 ? 'day' : 'days'} left
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-center py-6">No upcoming deadlines</div>
-                )}
-              </div>
-              
-              {/* Program Stats */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Program Stats</h2>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Active Projects</span>
-                    <span className="font-bold">24</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Participants</span>
-                    <span className="font-bold">187</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Total Proposals</span>
-                    <span className="font-bold">156</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Points Distributed</span>
-                    <span className="font-bold">3.2M</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Quick Links */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Quick Links</h2>
-                
-                <div className="space-y-2">
-                  <Link href="/proposals/new">
-                    <div className="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 flex items-center">
-                      <PlusCircle size={18} className="mr-3 text-blue-400" />
-                      <span>Submit New Proposal</span>
-                    </div>
-                  </Link>
-                  
-                  <Link href="/ideaboard">
-                    <div className="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 flex items-center">
-                      <File size={18} className="mr-3 text-green-400" />
-                      <span>Browse Idea Board</span>
-                    </div>
-                  </Link>
-                  
-                  <Link href="/projects">
-                    <div className="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 flex items-center">
-                      <Users size={18} className="mr-3 text-purple-400" />
-                      <span>View Active Projects</span>
-                    </div>
-                  </Link>
-                  
-                  <Link href="/profile">
-                    <div className="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 flex items-center">
-                      <Award size={18} className="mr-3 text-yellow-400" />
-                      <span>Check Your Rewards</span>
-                    </div>
-                  </Link>
-                </div>
-              </div>
+            <div>
+              <h3 className="text-lg font-medium">
+                {profile?.username || session.user.email?.split('@')[0] || 'User'}
+              </h3>
+              <p className="text-gray-400">{session.user.email}</p>
+              <Link href="/profile" className="text-blue-400 text-sm hover:text-blue-300 mt-2 inline-block">
+                Edit Profile
+              </Link>
             </div>
           </div>
         </div>
-      </main>
-    </>
+        
+        {/* Stats Card */}
+        <div className="bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4">Your Stats</h2>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <p className="text-gray-400 text-sm">Proposals</p>
+              <p className="text-2xl font-bold">{userProposals?.length || 0}</p>
+            </div>
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <p className="text-gray-400 text-sm">Points</p>
+              <p className="text-2xl font-bold">{profile?.okto_points || 0}</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Quick Links Card */}
+        <div className="bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4">Quick Links</h2>
+          
+          <ul className="space-y-2">
+            <li>
+              <Link href="/proposals" className="text-blue-400 hover:text-blue-300">
+                All Proposals
+              </Link>
+            </li>
+            <li>
+              <Link href="/bounties" className="text-blue-400 hover:text-blue-300">
+                Open Bounties
+              </Link>
+            </li>
+            <li>
+              <Link href="/ideaboard" className="text-blue-400 hover:text-blue-300">
+                Idea Board
+              </Link>
+            </li>
+            <li>
+              <Link href="/rewards" className="text-blue-400 hover:text-blue-300">
+                Rewards Center
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Your Proposals */}
+        <div className="bg-gray-800 rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Your Proposals</h2>
+            <Link href="/proposals?filter=my" className="text-sm text-blue-400 hover:text-blue-300">
+              View All
+            </Link>
+          </div>
+          
+          {userProposals && userProposals.length > 0 ? (
+            <ul className="space-y-3">
+              {userProposals.map((proposal) => (
+                <li key={proposal.id} className="bg-gray-700 rounded-md p-3">
+                  <Link href={`/proposals/${proposal.id}`} className="block hover:bg-gray-600 rounded">
+                    <h3 className="font-medium">{proposal.title}</h3>
+                    <div className="flex items-center mt-2 text-sm">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        proposal.status === 'draft' ? 'bg-gray-500' : 
+                        proposal.status === 'submitted' ? 'bg-blue-500' : 
+                        proposal.status === 'approved' ? 'bg-green-500' : 
+                        proposal.status === 'rejected' ? 'bg-red-500' : 'bg-gray-500'
+                      }`}>
+                        {proposal.status && proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+                      </span>
+                      <span className="text-gray-400 ml-2">
+                        {proposal.created_at && new Date(proposal.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-gray-400">You haven't created any proposals yet.</p>
+              <Link 
+                href="/proposals/new" 
+                className="mt-2 inline-block text-blue-400 hover:text-blue-300"
+              >
+                Create your first proposal
+              </Link>
+            </div>
+          )}
+        </div>
+        
+        {/* Latest Proposals */}
+        <div className="bg-gray-800 rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Latest Proposals</h2>
+            <Link href="/proposals" className="text-sm text-blue-400 hover:text-blue-300">
+              View All
+            </Link>
+          </div>
+          
+          {latestProposals && latestProposals.length > 0 ? (
+            <ul className="space-y-3">
+              {latestProposals.map((proposal) => (
+                <li key={proposal.id} className="bg-gray-700 rounded-md p-3">
+                  <Link href={`/proposals/${proposal.id}`} className="block hover:bg-gray-600 rounded">
+                    <h3 className="font-medium">{proposal.title}</h3>
+                    <div className="flex items-center justify-between mt-2 text-sm">
+                      <div className="flex items-center">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          proposal.status === 'draft' ? 'bg-gray-500' : 
+                          proposal.status === 'submitted' ? 'bg-blue-500' : 
+                          proposal.status === 'approved' ? 'bg-green-500' : 
+                          proposal.status === 'rejected' ? 'bg-red-500' : 'bg-gray-500'
+                        }`}>
+                          {proposal.status && proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+                        </span>
+                        <span className="text-gray-400 ml-2">
+                          {proposal.created_at && new Date(proposal.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {proposal.profiles && (
+                        <div className="flex items-center">
+                          {proposal.profiles.avatar_url ? (
+                            <img 
+                              src={proposal.profiles.avatar_url} 
+                              alt={proposal.profiles.username || ''} 
+                              className="w-5 h-5 rounded-full mr-1"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center mr-1">
+                              <span className="text-white text-xs">
+                                {proposal.profiles.username?.charAt(0)?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-xs text-gray-400">
+                            {proposal.profiles.username || 'Unknown user'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-gray-400">No proposals have been submitted yet.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

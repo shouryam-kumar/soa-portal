@@ -1,21 +1,51 @@
+// src/components/layout/Header.tsx - Updated with fixed sign-out functionality
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Bell, User, LogOut, Menu, X } from 'lucide-react';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { signOut } from '@/lib/auth';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function Header() {
   const { supabase, user, session } = useSupabase();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setMobileMenuOpen(false);
+      setUserDropdownOpen(false);
+    };
+
+    window.addEventListener('popstate', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
+  }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
+    try {
+      setIsSigningOut(true);
+      
+      // Use the existing supabase instance from context instead of creating a new one
+      await supabase.auth.signOut();
+      
+      // Force a hard page reload to reset app state
+      window.location.href = '/?t=' + Date.now();
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+      // Only needed if the redirect doesn't happen
+      setIsSigningOut(false);
+      alert('There was a problem signing out. Please try again.');
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -42,6 +72,11 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
+            {session && (
+              <Link href="/dashboard" className="text-gray-300 hover:text-white text-sm">
+                Dashboard
+              </Link>
+            )}
             <Link href="/proposals" className="text-gray-300 hover:text-white text-sm">
               Proposals
             </Link>
@@ -74,13 +109,20 @@ export default function Header() {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            <button className="text-gray-300 hover:text-white">
-              <Bell size={20} />
-            </button>
+            {session && (
+              <button className="text-gray-300 hover:text-white">
+                <Bell size={20} />
+              </button>
+            )}
             
             {session ? (
-              <div className="relative group">
-                <button className="flex items-center space-x-2">
+              <div className="relative">
+                <button 
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center space-x-2"
+                  aria-expanded={userDropdownOpen}
+                  aria-haspopup="true"
+                >
                   {user?.avatar_url ? (
                     <Image
                       src={user.avatar_url}
@@ -98,31 +140,34 @@ export default function Header() {
                   )}
                 </button>
                 
-                <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg hidden group-hover:block z-10">
-                  <div className="py-2">
-                    {user && (
-                      <div className="px-4 py-2 border-b border-gray-700">
-                        <p className="text-sm font-medium">{user.username || 'User'}</p>
-                        <p className="text-xs text-gray-400">OKTO Points: {user.okto_points || 0}</p>
-                      </div>
-                    )}
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
-                      <div className="flex items-center space-x-2">
-                        <User size={16} />
-                        <span>Profile</span>
-                      </div>
-                    </Link>
-                    <button 
-                      onClick={handleSignOut}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <LogOut size={16} />
-                        <span>Sign Out</span>
-                      </div>
-                    </button>
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-10">
+                    <div className="py-2">
+                      {user && (
+                        <div className="px-4 py-2 border-b border-gray-700">
+                          <p className="text-sm font-medium">{user.username || 'User'}</p>
+                          <p className="text-xs text-gray-400">OKTO Points: {user.okto_points || 0}</p>
+                        </div>
+                      )}
+                      <Link href="/profile" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                        <div className="flex items-center space-x-2">
+                          <User size={16} />
+                          <span>Profile</span>
+                        </div>
+                      </Link>
+                      <button 
+                        onClick={handleSignOut}
+                        disabled={isSigningOut}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <LogOut size={16} />
+                          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="flex space-x-2">
@@ -143,6 +188,8 @@ export default function Header() {
             <button 
               className="md:hidden text-gray-300 hover:text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -167,6 +214,15 @@ export default function Header() {
               </form>
             </div>
             <nav className="space-y-1">
+              {session && (
+                <Link 
+                  href="/dashboard" 
+                  className="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              )}
               <Link 
                 href="/proposals" 
                 className="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"
@@ -195,6 +251,24 @@ export default function Header() {
               >
                 Idea Board
               </Link>
+              {session && (
+                <Link 
+                  href="/profile" 
+                  className="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+              )}
+              {session && (
+                <button 
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="block w-full text-left px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50"
+                >
+                  {isSigningOut ? 'Signing out...' : 'Sign Out'}
+                </button>
+              )}
             </nav>
           </div>
         )}

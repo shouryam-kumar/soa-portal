@@ -15,7 +15,7 @@ type Proposal = {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user } = useSupabase();
+  const { user, supabase } = useSupabase();
   const [myProposals, setMyProposals] = useState<Proposal[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myProposalsExpanded, setMyProposalsExpanded] = useState(true);
@@ -31,8 +31,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     const fetchMyProposals = async () => {
-      if (user) {
-        const { supabase } = useSupabase();
+      if (user && supabase) {
         const { data, error } = await supabase
           .from('proposals')
           .select('id, title, status')
@@ -46,7 +45,7 @@ export default function Sidebar() {
     };
 
     fetchMyProposals();
-  }, [user]);
+  }, [user, supabase]);
 
   return (
     <div className={`bg-gray-800 border-r border-gray-700 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>

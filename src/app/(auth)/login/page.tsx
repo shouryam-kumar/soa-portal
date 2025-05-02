@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -149,19 +150,10 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className="w-full inline-flex justify-center py-2 px-4 border border-gray-700 rounded-lg shadow-sm bg-gray-800 text-sm font-medium text-gray-300 hover:bg-gray-700"
-              onClick={() => {
-                // Implement social login here
-              }}
-            >
-              <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z" />
-              </svg>
-              Google
-            </button>
+          <div className="mt-6 grid grid-cols-1 gap-3">
+            {/* Use our new Google login button component */}
+            <GoogleLoginButton />
+            
             <button
               type="button"
               className="w-full inline-flex justify-center py-2 px-4 border border-gray-700 rounded-lg shadow-sm bg-gray-800 text-sm font-medium text-gray-300 hover:bg-gray-700"
@@ -176,7 +168,7 @@ export default function Login() {
                 <path d="M7.5 6.5V2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M22.5 12.5H18.5C17.4 12.5 16.5 13.4 16.5 14.5C16.5 15.6 17.4 16.5 18.5 16.5H22.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Wallet
+              Connect Wallet
             </button>
           </div>
         </div>

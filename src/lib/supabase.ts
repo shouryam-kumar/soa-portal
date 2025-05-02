@@ -1,5 +1,4 @@
-import { createClientComponentClient, createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/database.types';
 
 // Client-side Supabase client (for components with 'use client')
@@ -7,13 +6,7 @@ export const createClient = () => {
   return createClientComponentClient<Database>();
 };
 
-// Server-side Supabase client (for server components and API routes)
-export async function createServerClient() {
-  const cookiesInstance = cookies();
-  return createServerComponentClient<Database>({ cookies: () => cookiesInstance });
-}
-
-// Helper function to check if a user is authenticated
+// Helper function to check if a user is authenticated on the client
 export const isAuthenticated = async () => {
   const supabase = createClient();
   const { data, error } = await supabase.auth.getSession();
