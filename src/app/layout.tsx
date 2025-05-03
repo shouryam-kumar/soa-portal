@@ -1,11 +1,11 @@
-// src/app/layout.tsx (server component)
+// src/app/layout.tsx
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Header from '@/components/layout/Header';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import SupabaseProvider from '@/components/providers/SupabaseProvider';
-import ClientEffects from '@/components/ClientEffects';
+import type { Database } from '@/types/database.types';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,11 +21,11 @@ export default async function RootLayout({
 }) {
   // Properly handle cookies
   const cookieStore = cookies();
-  const supabase = createServerComponentClient({ 
+  const supabase = createServerComponentClient<Database>({ 
     cookies: () => cookieStore 
   });
   
-  // Get session
+  // Get initial session for hydration
   const { data } = await supabase.auth.getSession();
   const session = data.session;
 
@@ -33,7 +33,6 @@ export default async function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-gray-900 text-white`}>
         <SupabaseProvider session={session}>
-          <ClientEffects />
           <div className="flex flex-col min-h-screen">
             <Header />
             <div className="flex flex-1">
