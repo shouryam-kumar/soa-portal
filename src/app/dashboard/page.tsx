@@ -7,14 +7,18 @@ import Image from 'next/image';
 import { Database } from '@/types/database.types';
 import { 
   Award, 
-  Briefcase, 
-  Calendar, 
+  Users, 
   FileText, 
-  Gift, 
-  MessageSquare, 
+  Briefcase,
   PenTool, 
-  PlusCircle, 
+  Calendar, 
+  Sparkles, 
+  ChevronRight, 
   User,
+  TrendingUp,
+  CheckCircle,
+  MessageSquare,
+  PlusCircle,
   Wallet
 } from 'lucide-react';
 
@@ -74,49 +78,82 @@ export default async function Dashboard() {
   
   // Get status badge styles
   const getStatusBadge = (status: string | null) => {
-    if (!status) return 'bg-gray-500 text-white';
+    if (!status) return 'bg-gray-500/60 text-gray-100';
     
-    switch(status) {
+    switch(status.toLowerCase()) {
       case 'draft':
-        return 'bg-gray-500 text-white';
+        return 'bg-gray-500/60 text-gray-100 border border-gray-400';
       case 'submitted':
-        return 'bg-blue-500 text-white';
+        return 'bg-blue-500/60 text-blue-100 border border-blue-400';
       case 'approved':
-        return 'bg-green-500 text-white';
+        return 'bg-green-500/60 text-green-100 border border-green-400';
       case 'rejected':
-        return 'bg-red-500 text-white';
+        return 'bg-red-500/60 text-red-100 border border-red-400';
       default:
-        return 'bg-gray-500 text-white';
+        return 'bg-gray-500/60 text-gray-100 border border-gray-400';
+    }
+  };
+  
+  // Get status icon
+  const getStatusIcon = (status: string | null) => {
+    if (!status) return <Calendar size={14} />;
+    
+    switch(status.toLowerCase()) {
+      case 'draft':
+        return <Calendar size={14} />;
+      case 'submitted':
+        return <TrendingUp size={14} />;
+      case 'approved':
+        return <CheckCircle size={14} />;
+      case 'rejected':
+        return <MessageSquare size={14} />;
+      default:
+        return <Calendar size={14} />;
     }
   };
   
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-400 mt-1">
-            Welcome back, {profile?.username || session.user.email?.split('@')[0] || 'User'}
-          </p>
-        </div>
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl overflow-hidden mb-8 bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900">
+        <div className="absolute inset-0 bg-[url('/assets/grid-pattern.svg')] opacity-20"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/3"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl opacity-20 translate-y-1/2 -translate-x-1/3"></div>
         
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/proposals/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusCircle size={16} className="mr-2" />
-            Create New Proposal
-          </Link>
-          
-          <Link
-            href="/ideaboard"
-            className="inline-flex items-center px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >
-            <PenTool size={16} className="mr-2" />
-            Browse Ideas
-          </Link>
+        <div className="relative px-8 py-12 z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-blue-200 backdrop-blur-sm mb-4">
+                <Sparkles size={14} className="mr-1 text-blue-300" />
+                <span>Welcome to your SOA Portal Dashboard</span>
+              </div>
+              <h1 className="text-4xl font-bold text-white mb-2 flex items-center">
+                Hello, {profile?.username || session.user.email?.split('@')[0] || 'User'}!
+                <span className="inline-block ml-2 animate-pulse">👋</span>
+              </h1>
+              <p className="text-blue-100 max-w-lg">
+                Track your proposals, contribute to projects, and earn rewards. Your gateway to the SOA ecosystem.
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/proposals/new"
+                className="inline-flex items-center px-5 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+              >
+                <PlusCircle size={16} className="mr-2" />
+                Create New Proposal
+              </Link>
+              
+              <Link
+                href="/ideaboard"
+                className="inline-flex items-center px-5 py-2.5 rounded-xl shadow-lg text-sm font-medium text-white/90 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-200"
+              >
+                <PenTool size={16} className="mr-2" />
+                Browse Ideas
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -125,82 +162,120 @@ export default async function Dashboard() {
         {/* Left Column - User Profile and Stats */}
         <div className="lg:col-span-1 space-y-6">
           {/* User Profile Card */}
-          <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white">Your Profile</h2>
+          <div className="bg-gray-800/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm border border-gray-700/50">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full filter blur-xl -translate-y-1/2 translate-x-1/2"></div>
+              <h2 className="text-xl font-bold text-white flex items-center">
+                <User size={18} className="mr-2" />
+                Your Profile
+              </h2>
             </div>
             <div className="p-6">
               <div className="flex flex-col items-center mb-6">
                 {profile?.avatar_url ? (
-                  <div className="mb-4">
+                  <div className="mb-4 relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-50 animate-pulse"></div>
                     <Image
                       src={profile.avatar_url}
                       alt="Profile"
                       width={100}
                       height={100}
-                      className="rounded-full border-4 border-gray-700"
+                      className="rounded-full border-4 border-gray-700 relative z-10"
                     />
                   </div>
                 ) : (
-                  <div className="w-24 h-24 mb-4 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-3xl font-bold">
-                      {(profile?.username?.charAt(0) || session.user.email?.charAt(0) || 'U').toUpperCase()}
-                    </span>
+                  <div className="w-24 h-24 mb-4 relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-50 animate-pulse"></div>
+                    <div className="relative z-10 w-full h-full bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center border-4 border-gray-700">
+                      <span className="text-white text-3xl font-bold">
+                        {(profile?.username?.charAt(0) || session.user.email?.charAt(0) || 'U').toUpperCase()}
+                      </span>
+                    </div>
                   </div>
                 )}
                 
-                <h3 className="text-xl font-bold">
+                <h3 className="text-xl font-bold text-white">
                   {profile?.username || session.user.email?.split('@')[0] || 'User'}
                 </h3>
-                <p className="text-gray-400 mb-2">{session.user.email}</p>
+                <p className="text-gray-400 mb-3">{session.user.email}</p>
                 
                 {profile?.role && (
-                  <span className="bg-gray-700 text-blue-300 px-3 py-1 rounded-full text-xs">
+                  <span className="bg-blue-900/30 text-blue-300 px-3 py-1 rounded-full text-xs border border-blue-800/50 backdrop-blur-sm">
                     {profile.role}
                   </span>
+                )}
+                
+                {profile?.okto_points !== undefined && (
+                  <div className="mt-4 w-full bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-xl p-4 border border-indigo-800/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">Total Points</span>
+                      <div className="flex items-center text-xl font-bold text-blue-400">
+                        <Award size={18} className="mr-2 text-yellow-400" />
+                        {profile.okto_points}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
               
               <div className="space-y-4">
                 {profile?.bio && (
-                  <div>
-                    <h4 className="text-sm uppercase text-gray-500 font-medium mb-1">Bio</h4>
+                  <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
+                    <h4 className="text-sm uppercase text-gray-400 font-medium mb-2 flex items-center">
+                      <Users size={14} className="mr-1" />
+                      Bio
+                    </h4>
                     <p className="text-gray-300 text-sm">{profile.bio}</p>
                   </div>
                 )}
                 
-                {profile?.wallet_address && (
-                  <div>
-                    <h4 className="text-sm uppercase text-gray-500 font-medium mb-1">Wallet</h4>
-                    <div className="flex items-center">
-                      <Wallet size={16} className="text-gray-400 mr-2" />
-                      <p className="text-gray-300 text-sm font-mono truncate">
+                <div className="grid grid-cols-2 gap-3">
+                  {profile?.wallet_address && (
+                    <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30 col-span-2">
+                      <h4 className="text-sm uppercase text-gray-400 font-medium mb-2 flex items-center">
+                        <Wallet size={14} className="mr-1" />
+                        Wallet
+                      </h4>
+                      <p className="text-gray-300 text-sm font-mono truncate bg-gray-800/50 rounded-lg px-3 py-1.5">
                         {profile.wallet_address}
                       </p>
                     </div>
-                  </div>
-                )}
-                
-                {profile?.created_at && (
-                  <div>
-                    <h4 className="text-sm uppercase text-gray-500 font-medium mb-1">Member Since</h4>
-                    <div className="flex items-center">
-                      <Calendar size={16} className="text-gray-400 mr-2" />
+                  )}
+                  
+                  {profile?.created_at && (
+                    <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30 col-span-2 sm:col-span-1">
+                      <h4 className="text-sm uppercase text-gray-400 font-medium mb-2 flex items-center">
+                        <Calendar size={14} className="mr-1" />
+                        Member Since
+                      </h4>
                       <p className="text-gray-300 text-sm">
                         {formatDate(profile.created_at)}
                       </p>
                     </div>
+                  )}
+                  
+                  <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30 col-span-2 sm:col-span-1">
+                    <h4 className="text-sm uppercase text-gray-400 font-medium mb-2 flex items-center">
+                      <FileText size={14} className="mr-1" />
+                      Proposals
+                    </h4>
+                    <p className="text-2xl font-bold text-white">
+                      {userProposals?.length || 0}
+                    </p>
                   </div>
-                )}
+                </div>
                 
                 {profile?.skills && profile.skills.length > 0 && (
-                  <div>
-                    <h4 className="text-sm uppercase text-gray-500 font-medium mb-1">Skills</h4>
+                  <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
+                    <h4 className="text-sm uppercase text-gray-400 font-medium mb-2 flex items-center">
+                      <Sparkles size={14} className="mr-1" />
+                      Skills
+                    </h4>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.skills.map((skill, index) => (
+                      {profile.skills.map((skill: string, index: number) => (
                         <span 
                           key={index}
-                          className="bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs"
+                          className="bg-blue-900/20 text-blue-300 px-3 py-1 rounded-full text-xs border border-blue-800/30"
                         >
                           {skill}
                         </span>
@@ -210,8 +285,11 @@ export default async function Dashboard() {
                 )}
                 
                 <div className="pt-2">
-                  <Link href="/profile" className="text-blue-400 text-sm hover:text-blue-300 inline-flex items-center">
-                    <User size={14} className="mr-1" />
+                  <Link 
+                    href="/profile" 
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white font-medium hover:from-blue-700 hover:to-indigo-700 transition duration-200 inline-flex items-center justify-center"
+                  >
+                    <User size={16} className="mr-2" />
                     Edit Profile
                   </Link>
                 </div>
@@ -219,75 +297,46 @@ export default async function Dashboard() {
             </div>
           </div>
           
-          {/* Stats Card */}
-          <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white">Your Stats</h2>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <p className="text-gray-400 text-sm mb-1">Proposals</p>
-                  <div className="flex items-center">
-                    <FileText size={18} className="text-blue-400 mr-2" />
-                    <p className="text-2xl font-bold">{userProposals?.length || 0}</p>
-                  </div>
-                </div>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <p className="text-gray-400 text-sm mb-1">Points</p>
-                  <div className="flex items-center">
-                    <Award size={18} className="text-yellow-400 mr-2" />
-                    <p className="text-2xl font-bold">{profile?.okto_points || 0}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
           {/* Quick Links Card */}
-          <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white">Quick Links</h2>
+          <div className="bg-gray-800/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm border border-gray-700/50">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-5 relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full filter blur-xl -translate-y-1/2 translate-x-1/2"></div>
+              <h2 className="text-xl font-bold text-white flex items-center">
+                <Sparkles size={18} className="mr-2" />
+                Quick Links
+              </h2>
             </div>
             <div className="p-4">
-              <ul className="space-y-2">
-                <li>
-                  <Link 
-                    href="/proposals" 
-                    className="flex items-center p-2 text-gray-300 hover:bg-gray-700 rounded-md hover:text-white"
-                  >
-                    <FileText className="w-5 h-5 mr-3 text-blue-400" />
-                    <span>All Proposals</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link 
-                    href="/bounties" 
-                    className="flex items-center p-2 text-gray-300 hover:bg-gray-700 rounded-md hover:text-white"
-                  >
-                    <Briefcase className="w-5 h-5 mr-3 text-green-400" />
-                    <span>Open Bounties</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link 
-                    href="/ideaboard" 
-                    className="flex items-center p-2 text-gray-300 hover:bg-gray-700 rounded-md hover:text-white"
-                  >
-                    <PenTool className="w-5 h-5 mr-3 text-purple-400" />
-                    <span>Idea Board</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link 
-                    href="/rewards" 
-                    className="flex items-center p-2 text-gray-300 hover:bg-gray-700 rounded-md hover:text-white"
-                  >
-                    <Gift className="w-5 h-5 mr-3 text-yellow-400" />
-                    <span>Rewards Center</span>
-                  </Link>
-                </li>
-              </ul>
+              <div className="grid grid-cols-2 gap-3">
+                <Link 
+                  href="/proposals" 
+                  className="flex flex-col items-center p-4 text-gray-300 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 hover:text-white transition duration-200 border border-gray-600/30"
+                >
+                  <FileText className="w-8 h-8 mb-2 text-blue-400" />
+                  <span>Proposals</span>
+                </Link>
+                <Link 
+                  href="/bounties" 
+                  className="flex flex-col items-center p-4 text-gray-300 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 hover:text-white transition duration-200 border border-gray-600/30"
+                >
+                  <Briefcase className="w-8 h-8 mb-2 text-green-400" />
+                  <span>Bounties</span>
+                </Link>
+                <Link 
+                  href="/ideaboard" 
+                  className="flex flex-col items-center p-4 text-gray-300 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 hover:text-white transition duration-200 border border-gray-600/30"
+                >
+                  <PenTool className="w-8 h-8 mb-2 text-purple-400" />
+                  <span>Idea Board</span>
+                </Link>
+                <Link 
+                  href="/rewards" 
+                  className="flex flex-col items-center p-4 text-gray-300 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 hover:text-white transition duration-200 border border-gray-600/30"
+                >
+                  <Award className="w-8 h-8 mb-2 text-yellow-400" />
+                  <span>Rewards</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -295,34 +344,41 @@ export default async function Dashboard() {
         {/* Right Column - Proposals */}
         <div className="lg:col-span-2 space-y-6">
           {/* Your Proposals */}
-          <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-white">Your Proposals</h2>
-              <Link href="/proposals?filter=my" className="text-sm text-white hover:text-blue-200">
+          <div className="bg-gray-800/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm border border-gray-700/50">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-5 flex justify-between items-center relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full filter blur-xl -translate-y-1/2 translate-x-1/2"></div>
+              <h2 className="text-xl font-bold text-white flex items-center">
+                <FileText size={18} className="mr-2" />
+                Your Proposals
+              </h2>
+              <Link href="/proposals?filter=my" className="text-sm text-white/90 hover:text-white bg-white/10 px-3 py-1 rounded-full hover:bg-white/20 transition duration-200">
                 View All
               </Link>
             </div>
-            <div className="p-4">
+            <div className="p-5">
               {userProposals && userProposals.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {userProposals.map((proposal) => (
                     <Link 
                       key={proposal.id} 
                       href={`/proposals/${proposal.id}`}
-                      className="block bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors"
+                      className="group block bg-gray-700/40 rounded-xl p-5 hover:bg-gray-700/60 transition-all duration-200 border border-gray-600/30 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-900/10"
                     >
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-semibold text-white">{proposal.title}</h3>
-                        <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(proposal.status)}`}>
-                          {proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Unknown'}
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-semibold text-white group-hover:text-blue-300 transition duration-200">{proposal.title}</h3>
+                        <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs ${getStatusBadge(proposal.status)}`}>
+                          {getStatusIcon(proposal.status)}
+                          <span>
+                            {proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Unknown'}
+                          </span>
                         </span>
                       </div>
                       {proposal.short_description && (
-                        <p className="text-gray-400 text-sm mt-2 line-clamp-2">
+                        <p className="text-gray-300 text-sm mt-2 line-clamp-2 group-hover:text-gray-200 transition duration-200">
                           {proposal.short_description}
                         </p>
                       )}
-                      <div className="flex items-center mt-3 text-xs text-gray-500">
+                      <div className="flex items-center mt-3 text-xs text-gray-400 group-hover:text-gray-300 transition duration-200">
                         <Calendar size={14} className="mr-1" />
                         <span>
                           {formatDate(proposal.created_at)}
@@ -332,12 +388,14 @@ export default async function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <FileText size={48} className="mx-auto text-gray-600 mb-4" />
-                  <p className="text-gray-400 mb-4">You haven't created any proposals yet.</p>
+                <div className="text-center py-12 px-4 border-2 border-dashed border-gray-700 rounded-xl">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/20 mb-4">
+                    <FileText size={32} className="text-blue-400" />
+                  </div>
+                  <p className="text-gray-300 mb-4">You haven't created any proposals yet.</p>
                   <Link 
                     href="/proposals/new" 
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:from-blue-700 hover:to-indigo-700 transition duration-200"
                   >
                     <PlusCircle size={16} className="mr-2" />
                     Create your first proposal
@@ -348,37 +406,44 @@ export default async function Dashboard() {
           </div>
           
           {/* Latest Community Proposals */}
-          <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-white">Latest Proposals</h2>
-              <Link href="/proposals" className="text-sm text-white hover:text-indigo-200">
+          <div className="bg-gray-800/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm border border-gray-700/50">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 flex justify-between items-center relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full filter blur-xl -translate-y-1/2 translate-x-1/2"></div>
+              <h2 className="text-xl font-bold text-white flex items-center">
+                <Users size={18} className="mr-2" />
+                Latest Community Proposals
+              </h2>
+              <Link href="/proposals" className="text-sm text-white/90 hover:text-white bg-white/10 px-3 py-1 rounded-full hover:bg-white/20 transition duration-200">
                 View All
               </Link>
             </div>
-            <div className="p-4">
+            <div className="p-5">
               {latestProposals && latestProposals.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {latestProposals.map((proposal) => (
                     <Link 
                       key={proposal.id} 
                       href={`/proposals/${proposal.id}`}
-                      className="block bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors"
+                      className="group block bg-gray-700/40 rounded-xl p-5 hover:bg-gray-700/60 transition-all duration-200 border border-gray-600/30 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-900/10"
                     >
-                      <div className="flex justify-between">
-                        <h3 className="font-semibold text-white">{proposal.title}</h3>
-                        <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(proposal.status)}`}>
-                          {proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Unknown'}
+                      <div className="flex justify-between mb-3">
+                        <h3 className="font-semibold text-white group-hover:text-purple-300 transition duration-200">{proposal.title}</h3>
+                        <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs ${getStatusBadge(proposal.status)}`}>
+                          {getStatusIcon(proposal.status)}
+                          <span>
+                            {proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Unknown'}
+                          </span>
                         </span>
                       </div>
                       
                       {proposal.short_description && (
-                        <p className="text-gray-400 text-sm mt-2 line-clamp-2">
+                        <p className="text-gray-300 text-sm mt-2 line-clamp-2 group-hover:text-gray-200 transition duration-200">
                           {proposal.short_description}
                         </p>
                       )}
                       
                       <div className="flex items-center justify-between mt-3">
-                        <div className="text-xs text-gray-500 flex items-center">
+                        <div className="text-xs text-gray-400 flex items-center group-hover:text-gray-300 transition duration-200">
                           <Calendar size={14} className="mr-1" />
                           <span>
                             {formatDate(proposal.created_at)}
@@ -386,23 +451,26 @@ export default async function Dashboard() {
                         </div>
                         
                         {proposal.profiles && (
-                          <div className="flex items-center">
+                          <div className="flex items-center bg-gray-800/60 px-2 py-1 rounded-full">
                             {proposal.profiles.avatar_url ? (
-                              <Image 
-                                src={proposal.profiles.avatar_url} 
-                                alt={proposal.profiles.username || ''} 
-                                width={20} 
-                                height={20} 
-                                className="rounded-full mr-1"
-                              />
+                              <div className="relative">
+                                <div className="absolute inset-0 bg-purple-500 rounded-full blur opacity-30"></div>
+                                <Image 
+                                  src={proposal.profiles.avatar_url} 
+                                  alt={proposal.profiles.username || ''} 
+                                  width={20} 
+                                  height={20} 
+                                  className="rounded-full mr-1 relative z-10"
+                                />
+                              </div>
                             ) : (
-                              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center mr-1">
+                              <div className="w-5 h-5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mr-1">
                                 <span className="text-white text-xs">
                                   {(proposal.profiles.username?.charAt(0) || 'U').toUpperCase()}
                                 </span>
                               </div>
                             )}
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-gray-400 group-hover:text-gray-300 transition duration-200">
                               {proposal.profiles.username || 'Unknown user'}
                             </span>
                           </div>
@@ -412,9 +480,11 @@ export default async function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <MessageSquare size={48} className="mx-auto text-gray-600 mb-4" />
-                  <p className="text-gray-400">No proposals have been submitted yet.</p>
+                <div className="text-center py-12 px-4 border-2 border-dashed border-gray-700 rounded-xl">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-900/20 mb-4">
+                    <MessageSquare size={32} className="text-purple-400" />
+                  </div>
+                  <p className="text-gray-300">No proposals have been submitted yet.</p>
                 </div>
               )}
             </div>

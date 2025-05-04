@@ -2,6 +2,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Header from '@/components/layout/Header';
+import Sidebar from '@/components/layout/Sidebar';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import SupabaseProvider from '@/components/providers/SupabaseProvider';
@@ -35,8 +36,11 @@ export default async function RootLayout({
         <SupabaseProvider session={session}>
           <div className="flex flex-col min-h-screen">
             <Header />
-            <div className="flex flex-1">
-              {children}
+            <div className="flex flex-1 pt-16"> {/* Added pt-16 for header space */}
+              <Sidebar />
+              <main className="flex-1 ml-4 md:ml-64 p-4"> {/* Main content with margin for sidebar */}
+                {children}
+              </main>
             </div>
           </div>
         </SupabaseProvider>

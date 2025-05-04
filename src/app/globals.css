@@ -1,15 +1,10 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background-start-rgb: 13, 17, 27;
+  --background-end-rgb: 10, 13, 20;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,10 +20,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* Existing animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -42,4 +34,69 @@ body {
 
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* New animations for the revamped homepage */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(12deg); }
+  50% { transform: translateY(-15px) rotate(12deg); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes blob {
+  0%, 100% { transform: scale(1) translate(0px, 0px); }
+  33% { transform: scale(1.1) translate(30px, -50px); }
+  66% { transform: scale(0.9) translate(-20px, 20px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-blob {
+  animation: blob 15s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Timeline node styling */
+.timeline-node {
+  border-width: 0;
+  transition: all 0.3s;
+}
+
+.timeline-node::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 50%;
+  z-index: -1;
+  opacity: 0.8;
+  transition: all 0.3s;
+}
+
+.timeline-node:hover::before {
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  opacity: 1;
 }
