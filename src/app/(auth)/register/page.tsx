@@ -14,7 +14,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const router = useRouter();
+  const _router = useRouter();
   const supabase = createClientComponentClient();
 
   // Password validation
@@ -48,7 +48,7 @@ export default function Register() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -59,13 +59,13 @@ export default function Register() {
         },
       });
 
-      if (error) {
-        throw error;
+      if (signUpError) {
+        throw signUpError;
       }
 
       setIsSuccess(true);
-    } catch (error: any) {
-      setError(error.message || 'An error occurred during registration');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred during registration');
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +99,7 @@ export default function Register() {
             <Check size={48} className="mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Registration successful!</h3>
             <p className="mb-4">
-              We've sent a confirmation email to {email}. Please check your inbox and follow the instructions to verify your account.
+              We&apos;ve sent a confirmation email to {email}. Please check your inbox and follow the instructions to verify your account.
             </p>
             <Link href="/login">
               <button className="mt-4 w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">

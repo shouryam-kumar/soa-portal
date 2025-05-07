@@ -18,6 +18,7 @@ import {
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import type { Database } from '@/types/database.types';
+import Image from 'next/image';
 
 // Define types for bounty data
 interface BountyWithProfile {
@@ -321,9 +322,11 @@ export default function AdminBountiesPage() {
                             <div className="flex items-center">
                               {bounty.profiles?.avatar_url && (
                                 <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden mr-2">
-                                  <img 
+                                  <Image 
                                     src={bounty.profiles.avatar_url} 
                                     alt={bounty.profiles.username || "User"}
+                                    width={24}
+                                    height={24}
                                     className="w-full h-full object-cover"
                                   />
                                 </div>

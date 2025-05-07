@@ -88,7 +88,15 @@ export default function SupabaseProvider({
   }, [initialSession, isLoading]);
 
   // Create fallback user object if profile fetch fails
-  const createBasicUserProfile = useCallback((session: Session): UserProfile => {
+  const createBasicUserProfile = useCallback(() => {
+    if (!session || !session.user) {
+      return {
+        id: 'unknown',
+        email: '',
+        username: 'Guest',
+      };
+    }
+    
     const { user } = session;
     return {
       id: user.id,
@@ -96,7 +104,133 @@ export default function SupabaseProvider({
       avatar_url: user.user_metadata?.avatar_url,
       username: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
     };
-  }, []);
+  }, [session]);
+
+  // Create a user profile if it doesn't exist
+  const createUserProfile = useCallback(async () => {
+    if (!session || !session.user) {
+      console.error('Cannot create profile: no active session');
+      return null;
+    }
+
+    try {
+      const userData = session.user;
+      
+      // Extract data from user metadata or use defaults
+      const newProfile = {
+        id: userData.id,
+        username: userData.user_metadata?.username || userData.email?.split('@')[0] || 'User',
+        avatar_url: userData.user_metadata?.avatar_url || null,
+        okto_points: 0,
+        is_admin: false,
+        email: userData.email,
+        created_at: new Date().toISOString(),
+      };
+      
+      console.log('Creating new user profile:', newProfile);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .insert(newProfile)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating profile:', error);
+        setUser(newProfile); // Still use the data even if save failed
+        return newProfile;
+      } else {
+        console.log('Profile created successfully');
+        setUser(newProfile);
+        
+        // Refresh the page to update UI with the new profile
+        setTimeout(() => {
+          router.refresh();
+        }, 1000);
+
+        return newProfile;
+      }
+    } catch (error) {
+      console.error('Error in createUserProfile:', error);
+      
+      // Fallback to basic user object
+      const basicProfile = createBasicUserProfile();
+      setUser(basicProfile);
+      return basicProfile;
+    }
+  }, [supabase, router, session, createBasicUserProfile]);
+
+  // More robust profile fetching
+  const fetchUserProfile = useCallback(async () => {
+    if (!session) {
+      console.warn('Cannot fetch profile: missing session');
+      setUser(null);
+      return null;
+    }
+    
+    // Limit retries
+    if (profileFetchAttempts.current > 2) {
+      console.warn('Too many profile fetch attempts, using basic info only');
+      
+      const basicUser = createBasicUserProfile();
+      setUser(basicUser);
+      return basicUser;
+    }
+    
+    profileFetchAttempts.current++;
+    
+    try {
+      console.log('Fetching profile for user:', session.user.id);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        
+        // Create profile if it doesn't exist (common for new users)
+        if (error.code === 'PGRST116') { // No rows returned
+          console.log('No profile found, creating one');
+          return await createUserProfile();
+        }
+        
+        // Fallback to basic user data if available
+        const basicUser = createBasicUserProfile();
+        setUser(basicUser);
+        return basicUser;
+      }
+      
+      if (data) {
+        console.log('Profile data loaded for:', data.username || session.user.id);
+        
+        // Merge profile data with user metadata from session if available
+        if (session?.user?.user_metadata) {
+          const mergedData = {
+            ...data,
+            avatar_url: data.avatar_url || session.user.user_metadata.avatar_url,
+            username: data.username || session.user.user_metadata.username || session.user.email?.split('@')[0],
+          };
+          setUser(mergedData);
+          return mergedData;
+        } else {
+          setUser(data);
+          return data;
+        }
+      } else {
+        console.log('No profile found for user', session.user.id);
+        // Create profile if it doesn't exist
+        return await createUserProfile();
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      // Fallback to basic user info
+      const basicUser = createBasicUserProfile();
+      setUser(basicUser);
+      return basicUser;
+    }
+  }, [supabase, session, createBasicUserProfile, createUserProfile]);
 
   // Memoize the refreshSession function to avoid recreation on renders
   const refreshSession = useCallback(async () => {
@@ -120,11 +254,11 @@ export default function SupabaseProvider({
         setSession(currentSession);
         
         // Create a minimal user object right away to prevent UI flashing
-        const basicUser = createBasicUserProfile(currentSession);
+        const basicUser = createBasicUserProfile();
         setUser(prev => prev || basicUser);
         
         // Then fetch the full profile
-        await fetchUserProfile(currentSession.user.id);
+        await fetchUserProfile();
       } else {
         console.log('No session found on refresh');
         setSession(null);
@@ -138,135 +272,7 @@ export default function SupabaseProvider({
       setIsLoading(false);
       profileFetchAttempts.current = 0; // Reset attempts counter on successful refresh
     }
-  }, [supabase, isLoading, createBasicUserProfile]);
-
-  // More robust profile fetching
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    if (!userId) {
-      console.warn('Cannot fetch profile: missing userId');
-      setUser(null);
-      return;
-    }
-    
-    // Limit retries
-    if (profileFetchAttempts.current > 2) {
-      console.warn('Too many profile fetch attempts, using basic info only');
-      
-      if (session) {
-        // Just use session data to create a minimal profile
-        setUser(createBasicUserProfile(session));
-      }
-      return;
-    }
-    
-    profileFetchAttempts.current++;
-    
-    try {
-      console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        
-        // Create profile if it doesn't exist (common for new users)
-        if (error.code === 'PGRST116' && session) { // No rows returned
-          console.log('No profile found, creating one');
-          await createUserProfile(userId, session);
-          return;
-        }
-        
-        // Fallback to basic user data if available
-        if (session) {
-          setUser(createBasicUserProfile(session));
-        } else {
-          setUser({ id: userId });
-        }
-        return;
-      }
-      
-      if (data) {
-        console.log('Profile data loaded for:', data.username || userId);
-        
-        // Merge profile data with user metadata from session if available
-        if (session?.user?.user_metadata) {
-          const mergedData = {
-            ...data,
-            avatar_url: data.avatar_url || session.user.user_metadata.avatar_url,
-            username: data.username || session.user.user_metadata.username || session.user.email?.split('@')[0],
-          };
-          setUser(mergedData);
-        } else {
-          setUser(data);
-        }
-      } else {
-        console.log('No profile found for user', userId);
-        // Create profile if it doesn't exist
-        if (session) {
-          await createUserProfile(userId, session);
-        } else {
-          // No profile found, but we have a user ID
-          setUser({ id: userId });
-        }
-      }
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
-      // Only set basic user info
-      if (session) {
-        setUser(createBasicUserProfile(session));
-      } else {
-        setUser({ id: userId });
-      }
-    }
-  }, [supabase, session, createBasicUserProfile]);
-
-  // Create a user profile if it doesn't exist
-  const createUserProfile = useCallback(async (userId: string, session: Session) => {
-    try {
-      const userData = session.user;
-      
-      // Extract data from user metadata or use defaults
-      const newProfile = {
-        id: userId,
-        username: userData.user_metadata?.username || userData.email?.split('@')[0] || 'User',
-        avatar_url: userData.user_metadata?.avatar_url || null,
-        okto_points: 0,
-        is_admin: false,
-        email: userData.email,
-        created_at: new Date().toISOString(),
-      };
-      
-      console.log('Creating new user profile:', newProfile);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .insert(newProfile)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error creating profile:', error);
-        setUser(newProfile); // Still use the data even if save failed
-      } else {
-        console.log('Profile created successfully');
-        setUser(newProfile);
-        
-        // Refresh the page to update UI with the new profile
-        setTimeout(() => {
-          router.refresh();
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('Error in createUserProfile:', error);
-      
-      // Fallback to basic user object
-      const basicProfile = createBasicUserProfile(session);
-      setUser(basicProfile);
-    }
-  }, [supabase, router, createBasicUserProfile]);
+  }, [supabase, isLoading, createBasicUserProfile, fetchUserProfile]);
 
   // Check auth state on mount and subscribe to changes
   useEffect(() => {
@@ -289,11 +295,11 @@ export default function SupabaseProvider({
           setSession(currentSession);
           
           // Create a minimal user object right away to prevent UI flashing
-          const basicUser = createBasicUserProfile(currentSession);
+          const basicUser = createBasicUserProfile();
           setUser(basicUser);
           
           // Then fetch the full profile
-          await fetchUserProfile(currentSession.user.id);
+          await fetchUserProfile();
         } else {
           console.log('No session found, clearing user state');
           setSession(null);
@@ -330,11 +336,11 @@ export default function SupabaseProvider({
           setSession(newSession);
           
           // Create a minimal user object right away
-          const basicUser = createBasicUserProfile(newSession);
+          const basicUser = createBasicUserProfile();
           setUser(basicUser);
           
           // Then fetch the full profile
-          await fetchUserProfile(newSession.user.id);
+          await fetchUserProfile();
           router.refresh();
           setIsLoading(false);
         } else if (event === 'SIGNED_OUT') {
@@ -366,7 +372,7 @@ export default function SupabaseProvider({
           console.log('User updated, refreshing profile');
           setSession(newSession);
           if (newSession.user?.id) {
-            await fetchUserProfile(newSession.user.id);
+            await fetchUserProfile();
           }
         }
       }
