@@ -13,6 +13,7 @@ export async function middleware(req: NextRequest) {
     '/login',
     '/register',
     '/auth/callback',
+    '/admin/login', // Allow admin login page without auth
   ];
   
   // Define protected routes that should always require auth
@@ -22,11 +23,15 @@ export async function middleware(req: NextRequest) {
     '/proposals',
     '/projects',
     '/rewards',
-    '/admin',
     '/bounties',
   ];
   
-  // Check if path is protected
+  // Admin routes are handled separately
+  const isAdminRoute = path.startsWith('/admin');
+  // Admin login is a special case
+  const isAdminLogin = path === '/admin/login';
+  
+  // Check if path is protected (non-admin routes)
   const isProtectedRoute = PROTECTED_ROUTES.some(route => 
     path === route || path.startsWith(`${route}/`)
   );
@@ -65,27 +70,31 @@ export async function middleware(req: NextRequest) {
     
     if (error) {
       console.error('Auth error in middleware:', error.message);
+      // For admin routes, redirect to admin login on auth error
+      if (isAdminRoute) {
+        return NextResponse.redirect(new URL('/admin/login?error=auth', req.url));
+      }
       return NextResponse.redirect(new URL('/login?error=auth', req.url));
     }
     
     console.log('Session found:', session ? `Yes (${session.user.email})` : 'No');
     
-    // For protected routes, enforce authentication
-    if (isProtectedRoute && !session) {
-      console.log('Protected route accessed without auth, redirecting to login');
-      const redirectUrl = new URL('/login', req.url);
-      redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-    
-    // For admin routes, check if user is admin
-    if (path.startsWith('/admin')) {
-      console.log('Admin route detected, checking admin status');
-      
-      if (!session) {
-        console.log('No session for admin route, redirecting to login');
-        return NextResponse.redirect(new URL('/login?adminRequired=true', req.url));
+    // Handle admin routes
+    if (isAdminRoute) {
+      // Allow access to admin login page without auth
+      if (isAdminLogin) {
+        return res;
       }
+      
+      // For admin routes without session, redirect to admin login
+      if (!session) {
+        console.log('Admin route accessed without auth, redirecting to admin login');
+        // This is a key fix: redirect to admin login, not regular login
+        return NextResponse.redirect(new URL('/admin/login', req.url));
+      }
+      
+      // For all other admin routes, check auth and admin status
+      console.log('Admin route detected, checking admin status');
       
       try {
         const { data: profile, error } = await supabase
@@ -96,29 +105,41 @@ export async function middleware(req: NextRequest) {
         
         if (error) {
           console.error('Profile query error:', error.message);
-          return NextResponse.redirect(new URL('/?error=profile', req.url));
+          return NextResponse.redirect(new URL('/admin/login?error=profile', req.url));
         }
         
         console.log('Admin check:', profile?.is_admin ? 'Yes' : 'No');
         
         if (!profile?.is_admin) {
-          console.log('User is not admin, redirecting to home page');
-          return NextResponse.redirect(new URL('/?error=unauthorized', req.url));
+          console.log('User is not admin, redirecting to admin login');
+          return NextResponse.redirect(new URL('/admin/login?error=unauthorized', req.url));
         }
         
         console.log('User is admin, proceeding to admin route');
+        return res;
       } catch (error) {
         console.error('Error checking admin status:', error);
-        // On error, redirect to home page for safety
-        return NextResponse.redirect(new URL('/', req.url));
+        // On error, redirect to admin login
+        return NextResponse.redirect(new URL('/admin/login?error=middleware', req.url));
       }
+    }
+    
+    // For protected routes, enforce authentication
+    if (isProtectedRoute && !session) {
+      console.log('Protected route accessed without auth, redirecting to login');
+      const redirectUrl = new URL('/login', req.url);
+      redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
     }
     
     // All checks passed, continue with the request
     return res;
   } catch (error) {
     console.error('Middleware error:', error);
-    // On any error, redirect to login
+    // On any error, redirect to appropriate login page
+    if (isAdminRoute) {
+      return NextResponse.redirect(new URL('/admin/login?error=middleware', req.url));
+    }
     return NextResponse.redirect(new URL('/login?error=middleware', req.url));
   }
 }

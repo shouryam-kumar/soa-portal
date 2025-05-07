@@ -1,24 +1,19 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext } from 'react';
 
 interface SidebarContextType {
   isCollapsed: boolean;
-  setIsCollapsed: (collapsed: boolean) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    // Check if mobile on mount
-    setIsCollapsed(window.innerWidth < 768);
-  }, []);
+  // Always set isCollapsed to false - sidebar will never collapse
+  const isCollapsed = false;
 
   return (
-    <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
+    <SidebarContext.Provider value={{ isCollapsed }}>
       {children}
     </SidebarContext.Provider>
   );

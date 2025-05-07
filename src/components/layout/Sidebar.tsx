@@ -13,7 +13,6 @@ import {
   DollarSign, 
   ChevronDown, 
   ChevronRight,
-  ChevronLeft,
   Plus,
   HelpCircle
 } from 'lucide-react';
@@ -34,7 +33,6 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
   const pathname = usePathname();
   const { user, supabase } = useSupabase();
   const [myProposals, setMyProposals] = useState<Proposal[]>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [myProposalsExpanded, setMyProposalsExpanded] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -64,9 +62,6 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
 
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setIsCollapsed(true);
-      }
     };
 
     fetchMyProposals();
@@ -83,11 +78,11 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
     };
   }, [user, supabase]);
 
-  // Notify parent about width changes
+  // Notify parent about fixed width
   useEffect(() => {
-    const width = isCollapsed ? 64 : 256;
+    const width = 256;
     onWidthChange?.(width);
-  }, [isCollapsed, onWidthChange]);
+  }, [onWidthChange]);
 
   const getStatusColor = (status: string | null) => {
     switch(status) {
@@ -106,18 +101,8 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
   
   // Sidebar content
   return (
-    <div className={`fixed top-16 left-0 bottom-0 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700/50 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} z-40 overflow-hidden`}>
+    <div className="fixed top-16 left-0 bottom-0 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700/50 w-64 z-40 overflow-hidden">
       <div className="h-full flex flex-col p-2 overflow-y-auto">
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-gray-400 hover:text-white bg-gray-700/40 p-1 rounded-lg"
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
-        </div>
-        
         <nav className="flex-1">
           <ul className="space-y-1">
             {navItems.map((item) => (
@@ -133,12 +118,10 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
                     <span className={`flex-shrink-0 ${pathname === item.path ? 'animate-pulse' : ''}`}>
                       {item.icon}
                     </span>
-                    {!isCollapsed && (
-                      <span className={`ml-3 ${pathname === item.path ? 'font-medium' : ''}`}>
-                        {item.label}
-                      </span>
-                    )}
-                    {pathname === item.path && !isCollapsed && (
+                    <span className={`ml-3 ${pathname === item.path ? 'font-medium' : ''}`}>
+                      {item.label}
+                    </span>
+                    {pathname === item.path && (
                       <div className="ml-auto w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-600 rounded-full" />
                     )}
                   </div>
@@ -147,7 +130,7 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
             ))}
           </ul>
           
-          {user && !isCollapsed && (
+          {user && (
             <div className="mt-8 px-3">
               <div
                 onClick={() => setMyProposalsExpanded(!myProposalsExpanded)}
@@ -210,24 +193,22 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
           )}
         </nav>
         
-        {!isCollapsed && (
-          <div className="mt-auto pt-6 border-t border-gray-700/50 mt-4 px-3">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-850 rounded-xl p-4 border border-gray-700/50">
-              <h4 className="text-sm font-semibold mb-2 flex items-center text-gray-200">
-                <HelpCircle size={14} className="mr-1.5 text-blue-400" />
-                Need Help?
-              </h4>
-              <p className="text-xs text-gray-400 mb-3">
-                Check out our documentation or join the community Discord for assistance.
-              </p>
-              <Link href="https://docs.okto.tech" target="_blank" rel="noopener noreferrer">
-                <button className="w-full bg-blue-600/70 hover:bg-blue-600 text-white rounded-lg px-3 py-1.5 text-sm flex items-center justify-center transition-colors duration-200">
-                  View Documentation
-                </button>
-              </Link>
-            </div>
+        <div className="mt-auto pt-6 border-t border-gray-700/50 mt-4 px-3">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-850 rounded-xl p-4 border border-gray-700/50">
+            <h4 className="text-sm font-semibold mb-2 flex items-center text-gray-200">
+              <HelpCircle size={14} className="mr-1.5 text-blue-400" />
+              Need Help?
+            </h4>
+            <p className="text-xs text-gray-400 mb-3">
+              Check out our documentation or join the community Discord for assistance.
+            </p>
+            <Link href="https://docs.okto.tech" target="_blank" rel="noopener noreferrer">
+              <button className="w-full bg-blue-600/70 hover:bg-blue-600 text-white rounded-lg px-3 py-1.5 text-sm flex items-center justify-center transition-colors duration-200">
+                View Documentation
+              </button>
+            </Link>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
