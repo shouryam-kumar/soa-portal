@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // src/app/dashboard/page.tsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
@@ -19,8 +21,16 @@ import {
   CheckCircle,
   MessageSquare,
   PlusCircle,
-  Wallet
+  Wallet,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FileEdit,
+  X,
+  AlertTriangle,
+  BarChart3
 } from 'lucide-react';
+import ClientSidebarDebug from '@/components/layout/ClientSidebarDebug';
 
 export default async function Dashboard() {
   // Properly handle cookies
@@ -112,6 +122,50 @@ export default async function Dashboard() {
     }
   };
   
+  // Fetch user's active milestones with proposal data
+  const { data: activeMilestones } = await supabase
+    .from('milestones')
+    .select(`
+      id,
+      title,
+      deadline,
+      completed,
+      points_allocated,
+      proposals (
+        id,
+        title
+      )
+    `)
+    .eq('completed', false)
+    .order('deadline', { ascending: true });
+
+  // Fetch recent activity from submissions, status changes, etc.
+  const { data: recentActivity } = await supabase
+    .from('submissions')
+    .select(`
+      id,
+      content,
+      created_at,
+      approved,
+      milestone_id,
+      milestones (
+        id,
+        title,
+        proposals (
+          id,
+          title
+        )
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  // Get upcoming milestones
+  const upcomingMilestones = activeMilestones?.filter(m => !m.completed).slice(0, 3) || [];
+  
+  // Get latest proposals
+  const latestProposalsFromUser = userProposals?.slice(0, 3) || [];
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Banner */}
@@ -156,6 +210,9 @@ export default async function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Debug Section (only in development) */}
+      <ClientSidebarDebug />
       
       {/* Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

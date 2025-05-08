@@ -22,47 +22,59 @@ import {
   Star,
   MessageSquare,
   Heart,
-  Briefcase
+  Briefcase,
+  Shield,
+  BarChart,
+  Settings,
+  Database,
+  Server
 } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
 
-// Timeline data
-interface TimelineItem {
-  date: string;
+// Feature showcase data
+interface Feature {
+  icon: ReactNode;
   title: string;
   description: string;
+  color: string;
 }
 
-const timelineData: TimelineItem[] = [
+const featuresData: Feature[] = [
   {
-    date: 'May 15, 2025',
-    title: 'Program Launch',
-    description: 'Official kickoff of the Summer of Abstraction program'
+    icon: <Shield size={32} className="text-blue-400" />,
+    title: 'Abstracted Smart Wallets',
+    description: 'Unified multi-chain wallets with Web2-style authentication powered by MPC security technology',
+    color: 'blue'
   },
   {
-    date: 'May 30, 2025',
-    title: 'Proposal Deadline',
-    description: 'Last day to submit your project proposals'
+    icon: <Globe size={32} className="text-purple-400" />,
+    title: 'Cross-Chain Liquidity',
+    description: 'Optimized asset bridging and routing across multiple chains and protocols for seamless Web3 experience',
+    color: 'purple'
   },
   {
-    date: 'June 5, 2025',
-    title: 'Projects Announced',
-    description: 'Selected projects and participants announced'
+    icon: <Settings size={32} className="text-green-400" />,
+    title: 'Intent-Based Actions',
+    description: 'Simple, user-focused transaction flows across chains with automated execution that abstracts complexity',
+    color: 'green'
   },
   {
-    date: 'June 10, 2025',
-    title: 'Development Phase Begins',
-    description: 'Start building and implementing your projects'
+    icon: <Database size={32} className="text-yellow-400" />,
+    title: 'Policy-Driven Controls',
+    description: 'Granular control over multi-chain transactions and permissions with customizable security settings',
+    color: 'yellow'
   },
   {
-    date: 'August 15, 2025',
-    title: 'Submission Deadline',
-    description: 'Final deadline for project submissions'
+    icon: <Code size={32} className="text-red-400" />,
+    title: 'Multi-Platform SDKs',
+    description: 'Comprehensive SDKs for React, NextJS, React Native, Unity, and TypeScript to build Web3 applications',
+    color: 'red'
   },
   {
-    date: 'August 30, 2025',
-    title: 'Winners Announced',
-    description: 'Program winners and rewards distribution'
+    icon: <Server size={32} className="text-indigo-400" />,
+    title: 'Multi-Chain Support',
+    description: 'Seamless interaction across different blockchains including EVM and non-EVM chains with unified access',
+    color: 'indigo'
   }
 ];
 
@@ -133,13 +145,13 @@ const GradientText = ({ text, className = "" }: GradientTextProps) => {
 export default function Home() {
   const { scrollY } = useScroll();
   const heroRef = useRef(null);
-  const timelineRef = useRef(null);
+  const featuresRef = useRef(null);
   const whyParticipateRef = useRef(null);
   const whoIsItForRef = useRef(null);
   const statsRef = useRef(null);
   const ctaRef = useRef(null);
   
-  const isTimelineInView = useInView(timelineRef, { once: true, amount: 0.2 });
+  const isFeaturesInView = useInView(featuresRef, { once: true, amount: 0.2 });
   const isWhyParticipateInView = useInView(whyParticipateRef, { once: true, amount: 0.2 });
   const isWhoIsItForInView = useInView(whoIsItForRef, { once: true, amount: 0.2 });
   const isStatsInView = useInView(statsRef, { once: true, amount: 0.2 });
@@ -183,7 +195,7 @@ export default function Home() {
               >
                 <div className="inline-flex items-center bg-white/10 rounded-full px-4 py-2 text-sm text-blue-200 backdrop-blur-sm mb-6">
                   <Sparkles size={16} className="mr-2 text-blue-300" />
-                  <span>Applications Open for 2025</span>
+                  <span>Applications Open Now</span>
                 </div>
                 
                 <h1 className="text-5xl font-bold mb-6 leading-tight">
@@ -193,7 +205,7 @@ export default function Home() {
                 </h1>
                 
                 <p className="text-gray-200 text-xl mb-8 max-w-2xl leading-relaxed">
-                  Build the future of Web3 with abstraction. Join our program to develop 
+                  Build the future of Web3 with Okto's abstraction technology. Join our program to develop 
                   innovative dApps, create educational content, and lead community initiatives 
                   with full support from the Okto team.
                 </p>
@@ -309,7 +321,7 @@ export default function Home() {
                 Building <GradientText text="Abstractions" className="" /> for Web3
               </h2>
               <p className="text-gray-300 text-lg leading-relaxed">
-                The Summer of Abstraction is a three-month program where developers, content creators, and community leaders collaborate to build the next generation of Web3 applications and services. Participants receive guidance, resources, and rewards for their contributions.
+                Summer of Abstraction is Okto's community engagement initiative that brings together developers and non-developers alike. Contribute to exciting projects, solve interesting challenges, and earn rewards while building your portfolio in Web3.
               </p>
             </div>
             
@@ -323,7 +335,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-bold mb-3 group-hover:text-blue-300 transition-colors duration-300">Build Applications</h3>
                 <p className="text-gray-400 leading-relaxed">
-                  Develop innovative dApps, tools, and services that leverage the Okto platform's abstraction capabilities.
+                  Develop innovative dApps, tools, and services that leverage Okto's abstraction SDK to simplify Web3 for users.
                 </p>
               </motion.div>
               
@@ -336,7 +348,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-bold mb-3 group-hover:text-purple-300 transition-colors duration-300">Create Content</h3>
                 <p className="text-gray-400 leading-relaxed">
-                  Develop tutorials, guides, and educational resources that help others understand and utilize the Okto ecosystem.
+                  Develop tutorials, guides, and educational resources that help others understand and utilize Okto's ecosystem and abstraction capabilities.
                 </p>
               </motion.div>
               
@@ -347,9 +359,9 @@ export default function Home() {
                 <div className="w-14 h-14 rounded-xl bg-green-900/30 flex items-center justify-center mb-6 group-hover:bg-green-900/50 transition-colors duration-300">
                   <Users size={28} className="text-green-400" />
                 </div>
-                <h3 className="text-xl font-bold mb-3 group-hover:text-green-300 transition-colors duration-300">Lead Community</h3>
+                <h3 className="text-xl font-bold mb-3 group-hover:text-green-300 transition-colors duration-300">Grow Community</h3>
                 <p className="text-gray-400 leading-relaxed">
-                  Organize events, workshops, and initiatives that grow and strengthen the community around Okto technology.
+                  Organize events, workshops, and initiatives that expand and strengthen the community around Okto's abstraction technology worldwide.
                 </p>
               </motion.div>
             </div>
@@ -365,10 +377,10 @@ export default function Home() {
                 <span>Participants</span>
               </div>
               <h2 className="text-4xl font-bold mb-6">
-                Who is it <GradientText text="for" className="" />?
+                Who can <GradientText text="participate" className="" />?
               </h2>
               <p className="text-gray-300 text-lg leading-relaxed">
-                Our program welcomes contributors from various backgrounds who are passionate about Web3 technology and want to make an impact.
+                Our program welcomes contributors from various backgrounds who are passionate about Web3 technology and want to make an impact through Okto's abstraction technology.
               </p>
             </div>
             
@@ -386,10 +398,10 @@ export default function Home() {
               }}
             >
               {[
-                { title: 'Content Creators', icon: '📸', description: 'Create tutorials, guides, and educational content about Okto.' },
-                { title: 'Developers', icon: '👨‍💻', description: 'Build applications, tools, and integrations using Okto SDK.' },
-                { title: 'Community Builders', icon: '👥', description: 'Lead initiatives that grow and strengthen the Okto community.' },
-                { title: 'Writers', icon: '✍️', description: 'Craft documentation, articles, and technical content for Okto users.' },
+                { title: 'Developers', icon: '👩‍💻', description: 'Build applications, tools, and integrations using Okto SDK and MPC technology.' },
+                { title: 'Content Creators', icon: '📷', description: 'Create tutorials, guides, and educational content about Okto abstraction.' },
+                { title: 'Community Builders', icon: '🌐', description: 'Lead initiatives that grow and strengthen the Okto ecosystem globally.' },
+                { title: 'Designers', icon: '🎨', description: 'Create intuitive UX/UI designs for Web3 applications built on Okto technology.' },
               ].map((item, index) => (
                 <motion.div 
                   key={index} 
@@ -408,26 +420,26 @@ export default function Home() {
           </div>
         </section>
         
-        {/* Program Timeline */}
-        <section ref={timelineRef} className="py-20 relative z-10 bg-gradient-to-b from-gray-900/95 to-gray-900/90">
+        {/* Platform Features */}
+        <section ref={featuresRef} className="py-20 relative z-10 bg-gradient-to-b from-gray-900/95 to-gray-900/90">
           <div className="container mx-auto px-6">
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="inline-flex items-center bg-blue-900/30 rounded-full px-4 py-2 text-sm text-blue-300 backdrop-blur-sm mb-4">
-                <Calendar size={16} className="mr-2" />
-                <span>Roadmap</span>
+                <Settings size={16} className="mr-2" />
+                <span>Platform</span>
               </div>
               <h2 className="text-4xl font-bold mb-6">
-                Program <GradientText text="Timeline" className="" />
+                Key <GradientText text="Features" className="" />
               </h2>
               <p className="text-gray-300 text-lg leading-relaxed">
-                From application to completion, follow our program timeline to stay on track with your projects.
+                Discover the powerful capabilities that make our platform the perfect environment for your Web3 projects.
               </p>
             </div>
             
             <motion.div 
-              className="relative max-w-4xl mx-auto"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               initial="hidden"
-              animate={isTimelineInView ? "visible" : "hidden"}
+              animate={isFeaturesInView ? "visible" : "hidden"}
               variants={{
                 hidden: {},
                 visible: {
@@ -437,32 +449,20 @@ export default function Home() {
                 }
               }}
             >
-              {/* Vertical line */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full"></div>
-              
-              {timelineData.map((item, index) => (
+              {featuresData.map((feature, index) => (
                 <motion.div 
                   key={index} 
-                  className={`flex items-center relative mb-16 ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}
+                  className={`bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 hover:border-${feature.color}-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-${feature.color}-900/10 group`}
                   variants={{
-                    hidden: { opacity: 0, x: index % 2 === 0 ? -20 : 20 },
-                    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
+                    hidden: { y: 20, opacity: 0 },
+                    visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
                   }}
                 >
-                  {/* Timeline node */}
-                  <div className="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 rounded-full bg-gray-800 border-4 border-blue-500 z-10 timeline-node"></div>
-                  
-                  {/* Content */}
-                  <div className={`w-5/12 ${index % 2 === 0 ? 'text-right pr-8' : 'text-left pl-8'}`}>
-                    <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-900/10">
-                      <span className="inline-block px-3 py-1 rounded-full text-xs bg-blue-900/40 text-blue-300 mb-3">{item.date}</span>
-                      <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                      <p className="text-gray-400">{item.description}</p>
-                    </div>
+                  <div className={`w-14 h-14 rounded-xl bg-${feature.color}-900/30 flex items-center justify-center mb-6 group-hover:bg-${feature.color}-900/50 transition-colors duration-300`}>
+                    {feature.icon}
                   </div>
-                  
-                  {/* Empty space for opposite side */}
-                  <div className="w-5/12"></div>
+                  <h3 className={`text-xl font-bold mb-3 group-hover:text-${feature.color}-300 transition-colors duration-300`}>{feature.title}</h3>
+                  <p className="text-gray-400 leading-relaxed">{feature.description}</p>
                 </motion.div>
               ))}
             </motion.div>
@@ -509,20 +509,20 @@ export default function Home() {
                 <Award size={36} className="text-blue-400 mb-6 transform group-hover:scale-110 transition-transform duration-300" />
                 <h3 className="text-2xl font-bold mb-4 relative z-10">Earn Rewards</h3>
                 <p className="text-gray-400 leading-relaxed relative z-10">
-                  Complete projects and bounties to earn OKTO Points, which can be converted to OKTO tokens post-TGE.
+                  Complete projects and bounties to earn OKTO Points from a pool of 3 million points, convertible to OKTO tokens post-TGE.
                 </p>
                 <ul className="mt-6 space-y-2 relative z-10">
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2"></div>
-                    <span>Token rewards for completed projects</span>
+                    <span>Share in the 3M Okto Points reward pool</span>
                   </li>
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2"></div>
-                    <span>Performance-based bonus incentives</span>
+                    <span>Compete for cash prizes from $10K pool</span>
                   </li>
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2"></div>
-                    <span>Additional benefits for top contributors</span>
+                    <span>Receive exclusive Okto merchandise</span>
                   </li>
                 </ul>
               </motion.div>
@@ -536,22 +536,22 @@ export default function Home() {
               >
                 <div className="absolute right-0 bottom-0 w-32 h-32 bg-purple-500/10 rounded-full filter blur-2xl transform translate-x-1/2 translate-y-1/2 group-hover:bg-purple-500/20 transition-all duration-500"></div>
                 <Users size={36} className="text-purple-400 mb-6 transform group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="text-2xl font-bold mb-4 relative z-10">Join the Community</h3>
+                <h3 className="text-2xl font-bold mb-4 relative z-10">Expert Mentorship</h3>
                 <p className="text-gray-400 leading-relaxed relative z-10">
-                  Connect with like-minded builders and become part of the growing Okto ecosystem.
+                  Connect with industry experts, Web3 leaders, and Team Okto through exclusive networking opportunities.
                 </p>
                 <ul className="mt-6 space-y-2 relative z-10">
+                  <li className="flex items-center text-gray-300">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mr-2"></div>
+                    <span>Direct mentorship from Okto team</span>
+                  </li>
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mr-2"></div>
                     <span>Network with Web3 professionals</span>
                   </li>
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mr-2"></div>
-                    <span>Mentorship from industry experts</span>
-                  </li>
-                  <li className="flex items-center text-gray-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mr-2"></div>
-                    <span>Exclusive access to events and workshops</span>
+                    <span>Access to CoinDCX Crypto Café</span>
                   </li>
                 </ul>
               </motion.div>
@@ -565,22 +565,22 @@ export default function Home() {
               >
                 <div className="absolute right-0 bottom-0 w-32 h-32 bg-indigo-500/10 rounded-full filter blur-2xl transform translate-x-1/2 translate-y-1/2 group-hover:bg-indigo-500/20 transition-all duration-500"></div>
                 <FileText size={36} className="text-indigo-400 mb-6 transform group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="text-2xl font-bold mb-4 relative z-10">Build Your Portfolio</h3>
+                <h3 className="text-2xl font-bold mb-4 relative z-10">Career Growth</h3>
                 <p className="text-gray-400 leading-relaxed relative z-10">
-                  Showcase your skills and contributions to strengthen your Web3 development portfolio.
+                  Feature on Okto's official channels and build your portfolio with real-world Web3 experience.
                 </p>
                 <ul className="mt-6 space-y-2 relative z-10">
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></div>
-                    <span>Hands-on experience with cutting-edge tech</span>
+                    <span>Featured on Okto's blogs & social media</span>
                   </li>
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></div>
-                    <span>Create portfolio-worthy projects</span>
+                    <span>Build portfolio-worthy projects</span>
                   </li>
                   <li className="flex items-center text-gray-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></div>
-                    <span>Recognition from the Okto team</span>
+                    <span>Potential for full-time roles with Okto</span>
                   </li>
                 </ul>
               </motion.div>
@@ -618,24 +618,24 @@ export default function Home() {
               }}
             >
               <Counter 
-                value="12" 
-                label="Active Projects" 
-                icon={<FileText size={32} className="text-blue-400" />} 
+                value="3,000,000" 
+                label="Okto Points Pool" 
+                icon={<Award size={32} className="text-blue-400" />} 
               />
               <Counter 
-                value="152" 
-                label="Participants" 
+                value="10,000" 
+                label="USD Prize Pool" 
                 icon={<Users size={32} className="text-purple-400" />} 
               />
               <Counter 
-                value="2,400,000" 
-                label="OKTO Points Distributed" 
-                icon={<Award size={32} className="text-yellow-400" />} 
+                value="5" 
+                label="Contribution Paths" 
+                icon={<Briefcase size={32} className="text-yellow-400" />} 
               />
               <Counter 
-                value="38" 
-                label="Completed Bounties" 
-                icon={<Briefcase size={32} className="text-green-400" />} 
+                value="150+" 
+                label="Participants" 
+                icon={<Globe size={32} className="text-green-400" />} 
               />
             </motion.div>
             
@@ -784,9 +784,9 @@ export default function Home() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Link href="/proposals/new">
+                  <Link href="https://docs.okto.tech/summer-of-abstraction" target="_blank">
                     <button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full px-8 py-4 font-bold shadow-lg shadow-blue-900/30 flex items-center transform hover:translate-y-[-2px] transition-all duration-200">
-                      Submit Proposal
+                      Learn More
                       <ChevronRight size={20} className="ml-1" />
                     </button>
                   </Link>
@@ -794,8 +794,8 @@ export default function Home() {
               </div>
               
               <div className="mt-16 inline-flex items-center py-2 px-4 bg-white/10 backdrop-blur-sm rounded-full text-sm text-blue-200">
-                <Calendar size={14} className="mr-2" />
-                Applications close on May 30, 2025 — Don't miss out!
+                <Sparkles size={14} className="mr-2" />
+                Join now and start building with Okto's abstraction technology!
               </div>
             </motion.div>
           </div>

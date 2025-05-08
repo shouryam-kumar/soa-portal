@@ -1,22 +1,41 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Production settings (disable checks for builds)
+  // Production settings
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Skip type checking during development
   reactStrictMode: true,
-  swcMinify: true,
-  // Fix "unescaped apostrophe" warnings
-  experimental: {
-    appDir: true,
-  },
+  // Image domains configuration
   images: {
-    domains: ['localhost', 'lrsmgdyxntdmtjdyxapt.supabase.co', 'lh3.googleusercontent.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lrsmgdyxntdmtjdyxapt.supabase.co',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      }
+    ],
+    domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
   },
+  // Disable experimental features 
+  experimental: {},
+  // Suppress the punycode deprecation warning
+  webpack: (config, { isServer }) => {
+    config.ignoreWarnings = [
+      { module: /node_modules\/punycode/ }
+    ];
+    
+    return config;
+  }
 };
 
 module.exports = nextConfig;

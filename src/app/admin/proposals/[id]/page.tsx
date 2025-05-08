@@ -20,6 +20,7 @@ import {
   Send,
   FileEdit
 } from 'lucide-react';
+import React from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import type { Database } from '@/types/database.types';
@@ -48,10 +49,20 @@ type Proposal = Database['public']['Tables']['proposals']['Row'] & {
   comments?: Comment[];
 };
 
-export default function AdminProposalDetail({ params }: { params: { id: string } }) {
+// Use a more specific type for params
+type PageParams = {
+  params: {
+    id: string
+  }
+};
+
+export default function AdminProposalDetail({ params }: PageParams) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const action = searchParams.get('action');
+  
+  // Safely access the id directly since we've properly typed it
+  const proposalId = params.id;
   
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +89,7 @@ export default function AdminProposalDetail({ params }: { params: { id: string }
           profiles:creator_id(id, username, avatar_url, bio, wallet_address),
           milestones(*)
         `)
-        .eq('id', params.id)
+        .eq('id', proposalId)
         .single();
       
       if (error) {
@@ -125,7 +136,7 @@ export default function AdminProposalDetail({ params }: { params: { id: string }
     };
     
     fetchProposal();
-  }, [supabase, params.id]);
+  }, [supabase, proposalId]);
   
   // Format date
   const formatDate = (dateString: string | null) => {

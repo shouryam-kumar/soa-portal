@@ -50,9 +50,9 @@ export default function AdminHeader({ title }: AdminHeaderProps) {
   };
   
   return (
-    <header className="bg-gray-800 border-b border-gray-700 py-3 px-6">
+    <header className="bg-gray-800 border-b border-gray-700 py-4 mb-6 rounded-lg shadow-md">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-bold text-white">{title}</h1>
         
         <div className="flex items-center space-x-4">
           {/* Search Bar */}

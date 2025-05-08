@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import Image from 'next/image';
 import { Database } from '@/types/database.types';
 
 interface GoogleLoginButtonProps {
@@ -16,7 +15,7 @@ export default function GoogleLoginButton({
 }: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   
-  const handleLogin = async () => {
+  const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
       
@@ -25,29 +24,22 @@ export default function GoogleLoginButton({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
+          redirectTo: `${window.location.origin}/callback`,
         }
       });
 
       if (error) {
-        console.error('Error signing in with Google:', error);
         throw error;
       }
     } catch (error) {
-      console.error('Google login error:', error);
-      alert('Error signing in with Google. Please try again.');
-    } finally {
-      setIsLoading(false);
+      console.error('Error signing in with Google:', error);
+      setIsLoading(false); // Only set to false on error, the redirect will happen otherwise
     }
   };
 
   return (
     <button
-      onClick={handleLogin}
+      onClick={handleGoogleLogin}
       disabled={isLoading}
       className={`flex items-center justify-center gap-2 w-full px-4 py-2 bg-white text-gray-800 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors ${className} ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
     >

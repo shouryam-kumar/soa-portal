@@ -23,7 +23,6 @@ import {
   Users,
   FilterIcon
 } from 'lucide-react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import type { Database } from '@/types/database.types';
 
@@ -185,7 +184,6 @@ export default function AdminBountyDetailClient({ id }: { id: string }) {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-900 text-white">
-        <AdminSidebar />
         <div className="flex-1 flex flex-col">
           <AdminHeader title="Bounty Details" />
           <main className="flex-1 p-6 flex items-center justify-center">
@@ -202,7 +200,6 @@ export default function AdminBountyDetailClient({ id }: { id: string }) {
   if (!bounty) {
     return (
       <div className="flex min-h-screen bg-gray-900 text-white">
-        <AdminSidebar />
         <div className="flex-1 flex flex-col">
           <AdminHeader title="Bounty Details" />
           <main className="flex-1 p-6 flex items-center justify-center">
@@ -223,9 +220,7 @@ export default function AdminBountyDetailClient({ id }: { id: string }) {
   }
   
   return (
-    <div className="flex min-h-screen bg-gray-900 text-white">
-      <AdminSidebar />
-      
+    <div className="min-h-screen bg-gray-900 text-white">
       <div className="flex-1 flex flex-col">
         <AdminHeader title="Bounty Details" />
         

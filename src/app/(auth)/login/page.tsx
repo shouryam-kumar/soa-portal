@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
+import siteConfig from '@/lib/site-config';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -46,12 +48,16 @@ export default function Login() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
             <div className="flex items-center justify-center">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xl font-bold">O</span>
-              </div>
+              <Image 
+                src="/images/logo.svg"
+                alt="Okto Logo"
+                width={120}
+                height={48}
+                priority
+              />
             </div>
           </Link>
-          <h1 className="text-2xl font-bold mt-6">Sign in to Okto Portal</h1>
+          <h1 className="text-2xl font-bold mt-6">Sign in to {siteConfig.name}</h1>
           <p className="text-gray-400 mt-2">
             Join the Summer of Abstraction program
           </p>

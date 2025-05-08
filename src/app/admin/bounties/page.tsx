@@ -13,12 +13,25 @@ import {
   FileEdit,
   ExternalLink,
   Users,
-  Award
+  Award,
+  Search,
+  Filter,
+  Plus,
+  Check,
+  Clock,
+  X,
+  ChevronDown,
+  ChevronUp,
+  DollarSign
 } from 'lucide-react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
-import AdminHeader from '@/components/admin/AdminHeader';
+import dynamic from 'next/dynamic';
 import type { Database } from '@/types/database.types';
 import Image from 'next/image';
+
+// Dynamically import AdminHeader
+const AdminHeader = dynamic(() => import('@/components/admin/AdminHeader'), { 
+  ssr: false 
+});
 
 // Define types for bounty data
 interface BountyWithProfile {
@@ -48,6 +61,10 @@ export default function AdminBountiesPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const supabase = createClientComponentClient<Database>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   // Fetch bounties with filters
   useEffect(() => {
@@ -170,10 +187,129 @@ export default function AdminBountiesPage() {
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
   
+  // Filter bounties based on search and filter type
+  const filteredBounties = bounties.filter(bounty => {
+    const matchesSearch = 
+      bounty.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bounty.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bounty.status?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bounty.profiles?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bounty.profiles?.avatar_url?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (filterType === 'all') return matchesSearch;
+    if (filterType === 'active') return matchesSearch && bounty.status === 'approved';
+    if (filterType === 'completed') return matchesSearch && bounty.status === 'completed';
+    if (filterType === 'draft') return matchesSearch && bounty.status === 'submitted';
+    if (filterType === 'cancelled') return matchesSearch && bounty.status === 'rejected';
+    
+    return matchesSearch;
+  });
+
+  // Sort bounties
+  const sortedBounties = [...filteredBounties].sort((a, b) => {
+    let valueA, valueB;
+    
+    if (sortBy === 'title') {
+      valueA = a.title.toLowerCase();
+      valueB = b.title.toLowerCase();
+      return sortDirection === 'asc' 
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
+    } 
+    else if (sortBy === 'amount') {
+      valueA = a.total_points;
+      valueB = b.total_points;
+      return sortDirection === 'asc' 
+        ? valueA - valueB
+        : valueB - valueA;
+    }
+    else if (sortBy === 'created_at') {
+      valueA = new Date(a.created_at || '').getTime();
+      valueB = new Date(b.created_at || '').getTime();
+      return sortDirection === 'asc' 
+        ? valueA - valueB
+        : valueB - valueA;
+    }
+    else if (sortBy === 'deadline') {
+      valueA = a.updated_at ? new Date(a.updated_at).getTime() : Number.MAX_SAFE_INTEGER;
+      valueB = b.updated_at ? new Date(b.updated_at).getTime() : Number.MAX_SAFE_INTEGER;
+      return sortDirection === 'asc' 
+        ? valueA - valueB
+        : valueB - valueA;
+    }
+    else if (sortBy === 'submissions') {
+      valueA = a.submissions_count;
+      valueB = b.submissions_count;
+      return sortDirection === 'asc' 
+        ? valueA - valueB
+        : valueB - valueA;
+    }
+    
+    return 0;
+  });
+
+  // Helper function for sortable headers
+  const renderSortableHeader = (label: string, value: string) => {
+    const isActive = sortBy === value;
+    return (
+      <button 
+        className={`flex items-center ${isActive ? 'text-blue-400' : 'text-gray-400'}`}
+        onClick={() => {
+          if (isActive) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+          } else {
+            setSortBy(value);
+            setSortDirection('desc');
+          }
+        }}
+      >
+        {label}
+        {isActive && (
+          sortDirection === 'asc' ? (
+            <ChevronUp size={14} className="ml-1" />
+          ) : (
+            <ChevronDown size={14} className="ml-1" />
+          )
+        )}
+      </button>
+    );
+  };
+
+  // Helper function for status badge
+  const getStatusBadge = (status: string | null) => {
+    if (!status) return null;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <Check size={12} className="mr-1" /> Active
+          </span>
+        );
+      case 'completed':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <Award size={12} className="mr-1" /> Completed
+          </span>
+        );
+      case 'submitted':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <Clock size={12} className="mr-1" /> Pending
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <X size={12} className="mr-1" /> Rejected
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen bg-gray-900 text-white">
-      <AdminSidebar />
-      
+    <div className="min-h-screen bg-gray-900 text-white">
       <div className="flex-1 flex flex-col">
         <AdminHeader title="Manage Bounties" />
         
@@ -247,17 +383,30 @@ export default function AdminBountiesPage() {
               <h2 className="text-xl font-bold">All Bounties</h2>
               
               <div className="flex flex-wrap gap-2">
+                {/* Search Bar */}
+                <div className="flex-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={16} className="text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search bounties..."
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-lg bg-gray-700 text-white placeholder-gray-400"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                
                 {/* Status Filter */}
                 <div className="relative">
                   <select
                     className="bg-gray-700 border border-gray-600 rounded-lg py-2 pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
                   >
                     <option value="all">All Statuses</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
                     <option value="approved">Approved</option>
+                    <option value="submitted">Submitted</option>
                     <option value="rejected">Rejected</option>
                     <option value="completed">Completed</option>
                   </select>
@@ -307,8 +456,8 @@ export default function AdminBountiesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700">
-                    {bounties.length > 0 ? (
-                      bounties.map((bounty) => (
+                    {sortedBounties.length > 0 ? (
+                      sortedBounties.map((bounty) => (
                         <tr key={bounty.id} className="hover:bg-gray-750">
                           <td className="py-3 px-4">
                             <Link href={`/admin/bounties/${bounty.id}`}>
@@ -338,15 +487,7 @@ export default function AdminBountiesPage() {
                             <span className="text-gray-400">{formatDate(bounty.created_at)}</span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                              bounty.status === 'approved' ? 'bg-green-900 text-green-300' :
-                              bounty.status === 'rejected' ? 'bg-red-900 text-red-300' :
-                              bounty.status === 'submitted' ? 'bg-yellow-900 text-yellow-300' :
-                              bounty.status === 'completed' ? 'bg-blue-900 text-blue-300' :
-                              'bg-gray-700 text-gray-300'
-                            }`}>
-                              {bounty.status ? bounty.status.charAt(0).toUpperCase() + bounty.status.slice(1) : 'Unknown'}
-                            </span>
+                            {getStatusBadge(bounty.status)}
                           </td>
                           <td className="py-3 px-4">
                             <span className="text-gray-400">

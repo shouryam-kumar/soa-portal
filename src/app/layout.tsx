@@ -29,16 +29,23 @@ export default async function RootLayout({
   // Get initial session for hydration
   const { data } = await supabase.auth.getSession();
   const session = data.session;
+  
+  // Note: The conditional rendering based on admin path is handled by the
+  // Header and Sidebar components themselves. They check the pathname
+  // and return null if it's an admin route.
 
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-900 text-white`}>
         <SupabaseProvider session={session}>
           <div className="flex flex-col min-h-screen">
+            {/* Header will not render itself on admin pages */}
             <Header />
-            <div className="flex flex-1 pt-16"> {/* Added pt-16 for header space */}
+            <div className="flex flex-1">
+              {/* Sidebar will not render itself on admin pages */}
               <Sidebar />
-              <main className="flex-1 ml-4 md:ml-64 p-4"> {/* Main content with margin for sidebar */}
+              {/* Add pl-72 class instead of pl-64 to increase spacing between sidebar and content */}
+              <main className="flex-1 p-6 md:pl-72">
                 {children}
               </main>
             </div>
