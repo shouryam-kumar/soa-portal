@@ -39,26 +39,20 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
   // Check if current page is an admin page
   const isAdminPage = pathname?.startsWith('/admin');
 
-  // Debug log for user
+  // Fetch proposals only once when user or supabase changes
   useEffect(() => {
-    console.log("Sidebar user state:", user ? `User ID: ${user.id}` : "No user");
-  }, [user]);
+    // Skip if no user or supabase, or if we're on admin page
+    if (!user || !supabase || isAdminPage) {
+      return;
+    }
 
-  useEffect(() => {
     const fetchMyProposals = async () => {
-      console.log("Attempting to fetch proposals...");
-      
-      if (!user) {
-        console.log("Cannot fetch proposals: No authenticated user");
-        return;
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Sidebar user state:", user ? `User ID: ${user.id}` : "No user");
+        console.log("Attempting to fetch proposals...");
+        console.log(`Fetching proposals for user ID: ${user.id}`);
       }
-      
-      if (!supabase) {
-        console.log("Cannot fetch proposals: Supabase client not available");
-        return;
-      }
-      
-      console.log(`Fetching proposals for user ID: ${user.id}`);
       
       try {
         const { data, error } = await supabase
@@ -73,7 +67,9 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
           return;
         }
         
-        console.log(`Found ${data?.length || 0} proposals for user:`, data);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Found ${data?.length || 0} proposals for user:`, data);
+        }
         
         if (data) {
           setMyProposals(data);
@@ -84,11 +80,14 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
       }
     };
 
+    fetchMyProposals();
+  }, [user?.id, supabase, isAdminPage]); // Depend on user.id instead of user object
+
+  // Handle screen size separately
+  useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-
-    fetchMyProposals();
     
     // Initial check
     checkScreenSize();
@@ -100,7 +99,7 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
-  }, [user, supabase]);
+  }, []); // Empty dependency array - only run once
 
   // Don't render the sidebar on admin pages - but only after all hooks have been called
   if (isAdminPage) {

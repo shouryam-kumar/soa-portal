@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/database.types';
@@ -12,13 +12,52 @@ interface ApproveRejectButtonsProps {
 
 export default function ApproveRejectButtons({ proposalId }: ApproveRejectButtonsProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectFeedback, setRejectFeedback] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const supabase = createClientComponentClient<Database>();
+  
+  // Check if the current page is in the admin section
+  const isAdminRoute = pathname?.startsWith('/admin');
+
+  // Verify admin status on the client side as an additional safeguard
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) {
+          setIsAdmin(false);
+          return;
+        }
+        
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('role, is_admin')
+          .eq('id', session.user.id)
+          .single();
+          
+        // Check both fields for compatibility
+        setIsAdmin(userProfile?.role === 'admin' || !!userProfile?.is_admin);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [supabase]);
 
   const handleApprove = async () => {
+    // Additional admin check
+    if (!isAdmin || !isAdminRoute) {
+      console.error('Unauthorized: Not an admin or not in admin section');
+      return;
+    }
+    
     setIsApproving(true);
     try {
       const { error } = await supabase
@@ -47,6 +86,12 @@ export default function ApproveRejectButtons({ proposalId }: ApproveRejectButton
   };
 
   const handleReject = async () => {
+    // Additional admin check
+    if (!isAdmin || !isAdminRoute) {
+      console.error('Unauthorized: Not an admin or not in admin section');
+      return;
+    }
+    
     if (!rejectFeedback.trim()) {
       return;
     }
@@ -73,6 +118,11 @@ export default function ApproveRejectButtons({ proposalId }: ApproveRejectButton
       setIsRejecting(false);
     }
   };
+  
+  // Don't render anything if not an admin OR not on an admin route
+  if (!isAdmin || !isAdminRoute) {
+    return null;
+  }
 
   return (
     <div>

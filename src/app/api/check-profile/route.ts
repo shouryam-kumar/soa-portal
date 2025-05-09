@@ -1,13 +1,18 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { createApiClient } from '@/lib/supabase-server';
 import type { Database } from '@/types/database.types';
 
 // Securely check profile completion status using server auth
-export async function GET() {
+export async function GET(request: Request) {
+  // Add cache control headers to the response
+  const headers = {
+    'Cache-Control': 'private, max-age=5, stale-while-revalidate=10',
+    'Vary': 'Cookie, Authorization',
+  };
+  
   try {
-    // Create a secure server-side client
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    // Create a secure server-side client with proper cookie handling
+    const supabase = await createApiClient();
     
     // Get authenticated user (secure method)
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -18,7 +23,7 @@ export async function GET() {
         authenticated: false,
         complete: false,
         error: userError?.message || 'User not authenticated'
-      }, { status: 401 });
+      }, { status: 401, headers });
     }
     
     console.log(`[API] Checking profile for user ${user.id} (${user.email})`);
@@ -56,7 +61,7 @@ export async function GET() {
             complete: false,
             error: 'Failed to create profile',
             profile_status: 'creation_failed'
-          }, { status: 500 });
+          }, { status: 500, headers });
         }
         
         // Return the newly created profile, but mark as incomplete
@@ -66,7 +71,7 @@ export async function GET() {
           profile: newProfile,
           message: 'New profile created',
           profile_status: 'new_profile_created'
-        });
+        }, { headers });
       }
       
       return NextResponse.json({ 
@@ -74,7 +79,7 @@ export async function GET() {
         complete: false,
         error: profileError.message,
         profile_status: 'fetch_error'
-      }, { status: 500 });
+      }, { status: 500, headers });
     }
     
     // Check if profile is complete
@@ -85,12 +90,14 @@ export async function GET() {
     
     console.log(`[API] Profile check: ${isComplete ? 'COMPLETE' : 'INCOMPLETE'} - Username: "${profile?.username}", Full name: "${profile?.full_name}"`);
     
+    // Add a timestamp to the response to prevent caching issues
     return NextResponse.json({
       authenticated: true,
       complete: isComplete,
       profile: profile || null,
-      profile_status: isComplete ? 'complete' : 'incomplete'
-    });
+      profile_status: isComplete ? 'complete' : 'incomplete',
+      timestamp: Date.now()
+    }, { headers });
     
   } catch (error: any) {
     console.error('Error in profile check API:', error);
@@ -99,6 +106,6 @@ export async function GET() {
       complete: false,
       error: error.message,
       profile_status: 'error'
-    }, { status: 500 });
+    }, { status: 500, headers });
   }
 } 

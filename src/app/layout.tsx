@@ -3,10 +3,8 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createServerClient } from '@/lib/supabase-server';
 import SupabaseProvider from '@/components/providers/SupabaseProvider';
-import type { Database } from '@/types/database.types';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,19 +18,12 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Properly handle cookies
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient<Database>({ 
-    cookies: () => cookieStore 
-  });
+  // Create a server-side client with proper cookie handling
+  const supabase = await createServerClient();
   
-  // Get initial session for hydration
+  // Get initial session for hydration (without using cookies().get)
   const { data } = await supabase.auth.getSession();
   const session = data.session;
-  
-  // Note: The conditional rendering based on admin path is handled by the
-  // Header and Sidebar components themselves. They check the pathname
-  // and return null if it's an admin route.
 
   return (
     <html lang="en">

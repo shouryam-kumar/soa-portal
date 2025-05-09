@@ -46,14 +46,15 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   
-  // Check if user is an admin
+  // Check if user is an admin (check both fields for compatibility)
   const { data: userProfile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', userId || '')
     .single();
   
-  const isAdmin = userProfile?.role === 'admin';
+  // Consider both role === 'admin' and is_admin === true for compatibility
+  const isAdmin = userProfile?.role === 'admin' || !!userProfile?.is_admin;
   const isCreator = userId === proposal.creator_id;
   
   // Format the date
@@ -118,7 +119,8 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
                 <h1 className="text-2xl font-bold mb-2">{proposal.title}</h1>
               </div>
               
-              {(isAdmin && proposal.status === 'submitted') && (
+              {/* Admin buttons are shown only in admin routes through the component's internal check */}
+              {proposal.status === 'submitted' && (
                 <ApproveRejectButtons proposalId={proposal.id} />
               )}
             </div>

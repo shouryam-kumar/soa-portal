@@ -12,7 +12,10 @@ export async function POST(request: Request) {
     }
     
     // Create a Supabase client for server-side operations
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient<Database>({ 
+      cookies: () => cookieStore 
+    });
     
     // Directly update or insert the profile
     const { data, error } = await supabase

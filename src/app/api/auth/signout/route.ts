@@ -5,7 +5,10 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     // Create a Supabase client for server-side operations
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ 
+      cookies: () => cookieStore 
+    });
     
     // Sign out the user
     await supabase.auth.signOut();

@@ -28,11 +28,27 @@ const nextConfig = {
   },
   // Disable experimental features 
   experimental: {},
-  // Suppress the punycode deprecation warning
+  // Webpack configuration
   webpack: (config, { isServer }) => {
+    // Suppress the punycode deprecation warning
     config.ignoreWarnings = [
       { module: /node_modules\/punycode/ }
     ];
+
+    // Disable code splitting to prevent Supabase chunking issues
+    if (isServer) {
+      config.optimization.splitChunks = false;
+    }
+
+    // Fix for server-side 'self is not defined' error
+    if (isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
     
     return config;
   }

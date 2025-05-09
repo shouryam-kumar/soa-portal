@@ -1,41 +1,25 @@
 'use server';
 
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerComponentClient, createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { Database } from '@/types/database.types';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
 
 /**
- * Server-side Supabase client - only use in server components or server actions
- * This uses a more direct approach to avoid issues with cookies().get()
+ * Creates a Supabase client for server components with proper cookie handling
  */
 export async function createServerClient() {
-  // Using this basic approach instead of the more complex cookies API
-  // This avoids the "cookies() should be awaited" error
-  const supabase = createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  
-  // Just return the client without trying to get session from cookies
-  return supabase;
+  const cookieStore = cookies();
+  return createServerComponentClient<Database>({ 
+    cookies: () => cookieStore
+  });
 }
 
 /**
- * For situations where we need to use the server component client
- * Only use this in app directory server components
+ * Creates a Supabase client for API routes with proper cookie handling
  */
-export function createAppDirServerClient() {
-  try {
-    return createServerComponentClient<Database>({
-      cookies
-    });
-  } catch (error) {
-    console.error('Error creating server client:', error);
-    // Fallback to basic client in case of errors
-    return createSupabaseClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
+export async function createApiClient() {
+  const cookieStore = cookies();
+  return createRouteHandlerClient<Database>({ 
+    cookies: () => cookieStore
+  });
 } 

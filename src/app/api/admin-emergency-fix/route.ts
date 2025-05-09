@@ -11,7 +11,10 @@ export async function GET(req: Request) {
     const adminEmail = url.searchParams.get('email');
     
     // Create a secure server-side client
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient<Database>({ 
+      cookies: () => cookieStore 
+    });
     
     // Get authenticated user (secure method)
     const { data: { user }, error: userError } = await supabase.auth.getUser();
