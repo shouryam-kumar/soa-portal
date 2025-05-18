@@ -43,6 +43,7 @@ interface Submission {
   created_at: string;
   status: 'pending' | 'approved' | 'rejected';
   feedback_count: number;
+  type: 'Project' | 'Bounty' | 'Proposal';
 }
 
 export default function AdminSubmissionsPage() {
@@ -53,120 +54,172 @@ export default function AdminSubmissionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof Submission | 'submitter.name' | 'project.title'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [submitterFilter, setSubmitterFilter] = useState('all');
+  const [dateRange, setDateRange] = useState<{start: string, end: string}>({ start: '', end: '' });
 
+  // Fetch and subscribe to submissions
   useEffect(() => {
-    const fetchSubmissions = async () => {
-      try {
-        setLoading(true);
-        
-        // For demo purposes, use mock data
-        const mockSubmissions: Submission[] = [
-          {
-            id: '1',
-            title: 'ZeroPass Authentication Integration',
-            submitter: {
-              id: 'user1',
-              name: 'Alex Johnson',
-              avatar: '/images/avatars/alex.jpg'
-            },
-            project: {
-              id: 'proj1',
-              title: 'ZeroPass Implementation'
-            },
-            created_at: '2023-11-15T14:30:00Z',
-            status: 'pending',
-            feedback_count: 3
-          },
-          {
-            id: '2',
-            title: 'Minecraft Server Plugin',
-            submitter: {
-              id: 'user2',
-              name: 'Sarah Miller',
-              avatar: '/images/avatars/sarah.jpg'
-            },
-            project: {
-              id: 'proj2',
-              title: 'Minecraft SDK Integration'
-            },
-            created_at: '2023-11-10T09:15:00Z',
-            status: 'approved',
-            feedback_count: 5
-          },
-          {
-            id: '3',
-            title: 'Frontend UI Components',
-            submitter: {
-              id: 'user3',
-              name: 'Michael Wong',
-              avatar: '/images/avatars/michael.jpg'
-            },
-            project: {
-              id: 'proj5',
-              title: 'Cross-Chain Bridge Integration'
-            },
-            created_at: '2023-11-05T16:45:00Z',
-            status: 'rejected',
-            feedback_count: 2
-          },
-          {
-            id: '4',
-            title: 'Smart Contract Audit Report',
-            submitter: {
-              id: 'user4',
-              name: 'Jamie Smith',
-              avatar: '/images/avatars/jamie.jpg'
-            },
-            project: {
-              id: 'proj3',
-              title: 'Smart Contract Auditing Tool'
-            },
-            created_at: '2023-11-02T11:20:00Z',
-            status: 'approved',
-            feedback_count: 0
-          },
-          {
-            id: '5',
-            title: 'Wallet Integration Documentation',
-            submitter: {
-              id: 'user5',
-              name: 'Diana Chen',
-              avatar: '/images/avatars/diana.jpg'
-            },
-            project: {
-              id: 'proj4',
-              title: 'Account Abstraction Wallet'
-            },
-            created_at: '2023-10-28T08:30:00Z',
-            status: 'pending',
-            feedback_count: 1
-          }
-        ];
-        
-        setSubmissions(mockSubmissions);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching submissions:', error);
-        setLoading(false);
-      }
+    let channels: any[] = [];
+    const fetchAllSubmissions = async () => {
+      setLoading(true);
+      // 1. Project/Milestone submissions
+      const { data: projectSubs, error: projectError } = await supabase
+        .from('submissions')
+        .select(`
+          id,
+          created_at,
+          approved,
+          feedback,
+          content,
+          profiles:submitted_by(id, username, avatar_url),
+          milestones(id, title, proposal_id, proposals(title))
+        `)
+        .order('created_at', { ascending: false });
+      // 2. Bounty submissions
+      const { data: bountySubs, error: bountyError } = await supabase
+        .from('bounty_submissions')
+        .select(`
+          id,
+          created_at,
+          status,
+          feedback,
+          title,
+          submitter:submitter_id(id, username, avatar_url),
+          bounties:bounty_id(id, title)
+        `)
+        .order('created_at', { ascending: false });
+      // 3. Proposal submissions (pending proposals)
+      const { data: proposalSubs, error: proposalError } = await supabase
+        .from('proposals')
+        .select(`
+          id,
+          title,
+          created_at,
+          status,
+          profiles:creator_id(id, username, avatar_url)
+        `)
+        .in('status', ['pending', 'under_review']);
+      // Map all to Submission[]
+      const mappedProject: Submission[] = (projectSubs || []).map((s: any) => ({
+        id: s.id,
+        title: s.milestones?.title || s.content || 'Untitled Submission',
+        submitter: {
+          id: s.profiles?.id || '',
+          name: s.profiles?.username || 'Unknown',
+          avatar: s.profiles?.avatar_url || undefined,
+        },
+        project: {
+          id: s.milestones?.proposal_id || '',
+          title: s.milestones?.proposals?.title || 'Untitled Project',
+        },
+        created_at: s.created_at,
+        status: s.approved === true ? 'approved' : s.approved === false ? 'rejected' : 'pending',
+        feedback_count: Array.isArray(s.feedback) ? s.feedback.length : (s.feedback ? 1 : 0),
+        type: 'Project',
+      }));
+      const mappedBounty: Submission[] = (bountySubs || []).map((s: any) => ({
+        id: s.id,
+        title: s.title || 'Untitled Bounty Submission',
+        submitter: {
+          id: s.submitter?.id || '',
+          name: s.submitter?.username || 'Unknown',
+          avatar: s.submitter?.avatar_url || undefined,
+        },
+        project: {
+          id: s.bounties?.id || '',
+          title: s.bounties?.title || 'Untitled Bounty',
+        },
+        created_at: s.created_at,
+        status: s.status || 'pending',
+        feedback_count: s.feedback ? 1 : 0,
+        type: 'Bounty',
+      }));
+      const mappedProposal: Submission[] = (proposalSubs || []).map((s: any) => ({
+        id: s.id,
+        title: s.title || 'Untitled Proposal',
+        submitter: {
+          id: s.profiles?.id || '',
+          name: s.profiles?.username || 'Unknown',
+          avatar: s.profiles?.avatar_url || undefined,
+        },
+        project: {
+          id: s.id,
+          title: s.title || 'Untitled Proposal',
+        },
+        created_at: s.created_at,
+        status: s.status === 'approved' ? 'approved' : s.status === 'rejected' ? 'rejected' : 'pending',
+        feedback_count: 0,
+        type: 'Proposal',
+      }));
+      // Combine and sort all
+      const allSubs = [...mappedProject, ...mappedBounty, ...mappedProposal].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setSubmissions(allSubs);
+      setLoading(false);
     };
-
-    fetchSubmissions();
+    fetchAllSubmissions();
+    // Real-time subscriptions
+    const projectChannel = supabase.channel('submissions_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, () => fetchAllSubmissions())
+      .subscribe();
+    const bountyChannel = supabase.channel('bounty_submissions_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bounty_submissions' }, () => fetchAllSubmissions())
+      .subscribe();
+    const proposalChannel = supabase.channel('proposals_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals' }, () => fetchAllSubmissions())
+      .subscribe();
+    channels = [projectChannel, bountyChannel, proposalChannel];
+    return () => {
+      channels.forEach(ch => supabase.removeChannel(ch));
+    };
   }, [supabase]);
+
+  // Approve/Reject handlers
+  const handleApprove = async (submission: Submission) => {
+    if (submission.type === 'Project') {
+      await supabase.from('submissions').update({ approved: true }).eq('id', submission.id);
+    } else if (submission.type === 'Bounty') {
+      await supabase.from('bounty_submissions').update({ status: 'approved' }).eq('id', submission.id);
+    } else if (submission.type === 'Proposal') {
+      await supabase.from('proposals').update({ status: 'approved' }).eq('id', submission.id);
+    }
+    setSubmissions(submissions => submissions.map(s => s.id === submission.id ? { ...s, status: 'approved' } : s));
+  };
+  const handleReject = async (submission: Submission) => {
+    if (submission.type === 'Project') {
+      await supabase.from('submissions').update({ approved: false }).eq('id', submission.id);
+    } else if (submission.type === 'Bounty') {
+      await supabase.from('bounty_submissions').update({ status: 'rejected' }).eq('id', submission.id);
+    } else if (submission.type === 'Proposal') {
+      await supabase.from('proposals').update({ status: 'rejected' }).eq('id', submission.id);
+    }
+    setSubmissions(submissions => submissions.map(s => s.id === submission.id ? { ...s, status: 'rejected' } : s));
+  };
+
+  // Get unique projects and submitters for filters
+  const uniqueProjects = Array.from(new Set(submissions.map(s => s.project.title)));
+  const uniqueSubmitters = Array.from(new Set(submissions.map(s => s.submitter.name)));
 
   // Filter and sort submissions
   const filteredSubmissions = submissions
     .filter(submission => {
-      // Apply search query filter
-      const matchesSearch = 
+      // Search
+      const matchesSearch =
         submission.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         submission.submitter.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         submission.project.title.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Apply status filter
+      // Status
       const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
+      // Project
+      const matchesProject = projectFilter === 'all' || submission.project.title === projectFilter;
+      // Submitter
+      const matchesSubmitter = submitterFilter === 'all' || submission.submitter.name === submitterFilter;
+      // Date range
+      const matchesDate = (!dateRange.start && !dateRange.end) || (
+        (!dateRange.start || new Date(submission.created_at) >= new Date(dateRange.start)) &&
+        (!dateRange.end || new Date(submission.created_at) <= new Date(dateRange.end))
+      );
+      return matchesSearch && matchesStatus && matchesProject && matchesSubmitter && matchesDate;
     })
     .sort((a, b) => {
       // Apply sorting
@@ -267,6 +320,46 @@ export default function AdminSubmissionsPage() {
               <option value="rejected">Rejected</option>
             </select>
           </div>
+          <div className="w-full md:w-48">
+            <select
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+            >
+              <option value="all">All Projects</option>
+              {uniqueProjects.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-full md:w-48">
+            <select
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+              value={submitterFilter}
+              onChange={(e) => setSubmitterFilter(e.target.value)}
+            >
+              <option value="all">All Submitters</option>
+              {uniqueSubmitters.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-full md:w-64">
+            <input
+              type="date"
+              className="w-1/2 bg-gray-700 border border-gray-600 rounded-lg py-2 px-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none mr-2"
+              value={dateRange.start}
+              onChange={e => setDateRange(r => ({ ...r, start: e.target.value }))}
+              placeholder="Start date"
+            />
+            <input
+              type="date"
+              className="w-1/2 bg-gray-700 border border-gray-600 rounded-lg py-2 px-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+              value={dateRange.end}
+              onChange={e => setDateRange(r => ({ ...r, end: e.target.value }))}
+              placeholder="End date"
+            />
+          </div>
         </div>
       </div>
       
@@ -354,6 +447,7 @@ export default function AdminSubmissionsPage() {
                     )}
                   </button>
                 </th>
+                <th className="px-6 py-3 text-sm font-medium text-gray-300">Type</th>
                 <th className="px-6 py-3 text-sm font-medium text-gray-300">Actions</th>
               </tr>
             </thead>
@@ -431,6 +525,15 @@ export default function AdminSubmissionsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        submission.type === 'Project' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                        submission.type === 'Bounty' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                        'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }`}>
+                        {submission.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex space-x-2">
                         <Link 
                           href={`/admin/submissions/${submission.id}`} 
@@ -439,18 +542,24 @@ export default function AdminSubmissionsPage() {
                         >
                           <Eye size={16} className="text-blue-400" />
                         </Link>
-                        <button 
-                          className="p-1.5 bg-green-600/20 rounded-md hover:bg-green-600/30 transition-colors"
-                          title="Approve"
-                        >
-                          <CheckCircle size={16} className="text-green-400" />
-                        </button>
-                        <button 
-                          className="p-1.5 bg-red-600/20 rounded-md hover:bg-red-600/30 transition-colors"
-                          title="Reject"
-                        >
-                          <XCircle size={16} className="text-red-400" />
-                        </button>
+                        {submission.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(submission)}
+                              className="p-1.5 bg-green-600/20 rounded-md hover:bg-green-600/30 transition-colors"
+                              title="Approve"
+                            >
+                              <CheckCircle size={16} className="text-green-400" />
+                            </button>
+                            <button
+                              onClick={() => handleReject(submission)}
+                              className="p-1.5 bg-red-600/20 rounded-md hover:bg-red-600/30 transition-colors"
+                              title="Reject"
+                            >
+                              <XCircle size={16} className="text-red-400" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

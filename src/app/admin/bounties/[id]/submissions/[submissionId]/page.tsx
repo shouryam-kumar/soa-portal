@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import React from 'react';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -16,7 +17,6 @@ import {
   FileText,
   Award
 } from 'lucide-react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import type { Database } from '@/types/database.types';
 
@@ -55,8 +55,13 @@ interface Submission {
 export default function AdminSubmissionDetail({ 
   params 
 }: { 
-  params: { id: string; submissionId: string } 
+  params: Promise<{ id: string; submissionId: string }> 
 }) {
+  // Unwrap params using React.use
+  const unwrappedParams = React.use(params);
+  const bountyId = unwrappedParams.id;
+  const submissionId = unwrappedParams.submissionId;
+  
   const router = useRouter();
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,23 +74,13 @@ export default function AdminSubmissionDetail({
       setLoading(true);
       
       const { data, error } = await supabase
-        .from('submissions')
+        .from('bounty_submissions')
         .select(`
           *,
-          submitter:submitted_by(id, username, avatar_url),
-          bounty:milestone_id(
-            id,
-            deadline,
-            proposal:proposal_id(
-              id,
-              title,
-              description,
-              total_points,
-              status
-            )
-          )
+          submitter:submitter_id(id, username, avatar_url),
+          bounty:bounty_id(id, title, description, total_points, status, deadline)
         `)
-        .eq('id', params.submissionId)
+        .eq('id', submissionId)
         .single();
       
       if (error) {
@@ -97,20 +92,24 @@ export default function AdminSubmissionDetail({
         // Transform the data to match our Submission interface
         const transformedData: Submission = {
           id: data.id,
-          bounty_id: data.milestone_id,
-          submitter_id: data.submitted_by,
-          title: data.content.split('\n')[0] || 'Untitled Submission',
-          description: data.content,
-          submission_url: data.links?.[0] || null,
-          submission_text: data.content,
-          status: data.approved === true ? 'approved' : data.approved === false ? 'rejected' : 'pending',
+          bounty_id: data.bounty_id,
+          submitter_id: data.submitter_id,
+          title: data.title,
+          description: data.description,
+          submission_url: data.submission_url || null,
+          submission_text: data.submission_text || null,
+          status: data.status,
           feedback: data.feedback || null,
-          points_awarded: null,
+          points_awarded: data.points_awarded || null,
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
           submitter: data.submitter,
-          bounty: data.bounty?.proposal ? {
-            ...data.bounty.proposal,
+          bounty: data.bounty ? {
+            id: data.bounty.id,
+            title: data.bounty.title,
+            description: data.bounty.description,
+            status: data.bounty.status,
+            total_points: data.bounty.total_points,
             deadline: data.bounty.deadline
           } : null
         };
@@ -121,7 +120,7 @@ export default function AdminSubmissionDetail({
     };
     
     fetchSubmission();
-  }, [supabase, params.id, params.submissionId]);
+  }, [supabase, bountyId, submissionId]);
   
   // Format date
   const formatDate = (dateString: string | null) => {
@@ -153,7 +152,6 @@ export default function AdminSubmissionDetail({
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-900 text-white">
-        <AdminSidebar />
         <div className="flex-1 flex flex-col">
           <AdminHeader title="Submission Details" />
           <main className="flex-1 p-6 flex items-center justify-center">
@@ -170,7 +168,6 @@ export default function AdminSubmissionDetail({
   if (!submission) {
     return (
       <div className="flex min-h-screen bg-gray-900 text-white">
-        <AdminSidebar />
         <div className="flex-1 flex flex-col">
           <AdminHeader title="Submission Details" />
           <main className="flex-1 p-6 flex items-center justify-center">
@@ -178,7 +175,7 @@ export default function AdminSubmissionDetail({
               <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
               <h2 className="text-xl font-bold mb-2">Submission Not Found</h2>
               <p className="text-gray-400 mb-6">The submission you're looking for doesn't exist or has been removed.</p>
-              <Link href={`/admin/bounties/${params.id}`}>
+              <Link href={`/admin/bounties/${bountyId}`}>
                 <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-5 py-2">
                   Return to Bounty
                 </button>
@@ -192,15 +189,13 @@ export default function AdminSubmissionDetail({
   
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
-      <AdminSidebar />
-      
       <div className="flex-1 flex flex-col">
         <AdminHeader title="Submission Details" />
         
         <main className="flex-1 p-6">
           <div className="mb-8">
             <Link 
-              href={`/admin/bounties/${params.id}`} 
+              href={`/admin/bounties/${bountyId}`} 
               className="text-purple-400 hover:text-purple-300 flex items-center mb-4"
             >
               <ArrowLeft size={16} className="mr-1" />
@@ -209,15 +204,8 @@ export default function AdminSubmissionDetail({
             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
               <div>
-                <div className={`px-3 py-1.5 text-sm font-medium rounded-lg inline-flex items-center mb-2 ${getStatusBadgeStyle(submission.status)}`}>
-                  {submission.status === 'approved' ? (
-                    <Check size={14} className="mr-1.5" />
-                  ) : submission.status === 'rejected' ? (
-                    <X size={14} className="mr-1.5" />
-                  ) : (
-                    <Clock size={14} className="mr-1.5" />
-                  )}
-                  {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
+                <div className="px-3 py-1.5 text-sm font-medium rounded-lg inline-flex items-center mb-2 bg-purple-900 text-purple-200">
+                  Submitted
                 </div>
                 
                 <h1 className="text-2xl font-bold">{submission.title}</h1>
@@ -226,24 +214,6 @@ export default function AdminSubmissionDetail({
                   Submitted on {formatDate(submission.created_at)}
                 </div>
               </div>
-              
-              {submission.status === 'pending' && (
-                <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
-                  <Link href={`/admin/bounties/${params.id}/submissions/${params.submissionId}/approve`}>
-                    <button className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 flex items-center">
-                      <Check size={16} className="mr-2" />
-                      Approve
-                    </button>
-                  </Link>
-                  
-                  <Link href={`/admin/bounties/${params.id}/submissions/${params.submissionId}/reject`}>
-                    <button className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 flex items-center">
-                      <X size={16} className="mr-2" />
-                      Reject
-                    </button>
-                  </Link>
-                </div>
-              )}
             </div>
           </div>
           
@@ -281,28 +251,6 @@ export default function AdminSubmissionDetail({
                   </div>
                 )}
               </div>
-              
-              {/* Feedback */}
-              {submission.feedback && (
-                <div className={`bg-${submission.status === 'approved' ? 'green' : 'red'}-900/20 border border-${submission.status === 'approved' ? 'green' : 'red'}-800 rounded-lg p-6`}>
-                  <h2 className="text-lg font-bold mb-4 flex items-center">
-                    {submission.status === 'approved' ? (
-                      <>
-                        <Check size={18} className="mr-2 text-green-400" />
-                        Approval Feedback
-                      </>
-                    ) : (
-                      <>
-                        <X size={18} className="mr-2 text-red-400" />
-                        Rejection Feedback
-                      </>
-                    )}
-                  </h2>
-                  <div className="text-gray-300 whitespace-pre-line">
-                    {submission.feedback}
-                  </div>
-                </div>
-              )}
             </div>
             
             {/* Sidebar */}
@@ -325,15 +273,6 @@ export default function AdminSubmissionDetail({
                       {submission.bounty?.total_points.toLocaleString()}
                     </span>
                   </div>
-                  
-                  {submission.status === 'approved' && submission.points_awarded && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Points Awarded:</span>
-                      <span className="font-bold text-green-400">
-                        {submission.points_awarded.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
                   
                   {submission.bounty?.deadline && (
                     <div className="flex justify-between items-center">
@@ -385,41 +324,10 @@ export default function AdminSubmissionDetail({
               
               {/* Quick Actions */}
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-lg font-bold mb-4">Quick Actions</h2>
-                
-                <div className="space-y-3">
-                  {submission.status === 'pending' ? (
-                    <>
-                      <Link href={`/admin/bounties/${params.id}/submissions/${params.submissionId}/approve`}>
-                        <button className="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm flex items-center justify-center">
-                          <Check size={16} className="mr-2" />
-                          Approve Submission
-                        </button>
-                      </Link>
-                      
-                      <Link href={`/admin/bounties/${params.id}/submissions/${params.submissionId}/reject`}>
-                        <button className="w-full bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 text-sm flex items-center justify-center">
-                          <X size={16} className="mr-2" />
-                          Reject Submission
-                        </button>
-                      </Link>
-                    </>
-                  ) : submission.status === 'approved' ? (
-                    <div className="p-4 bg-green-900/30 border border-green-800 rounded-lg text-center">
-                      <Check size={24} className="mx-auto mb-2 text-green-400" />
-                      <p className="text-green-300 font-medium">This submission has been approved</p>
-                      {submission.points_awarded && (
-                        <p className="text-green-400 text-sm mt-1">
-                          {submission.points_awarded} points awarded
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-red-900/30 border border-red-800 rounded-lg text-center">
-                      <X size={24} className="mx-auto mb-2 text-red-400" />
-                      <p className="text-red-300 font-medium">This submission has been rejected</p>
-                    </div>
-                  )}
+                <h2 className="text-lg font-bold mb-4">Submission Status</h2>
+                <div className="p-4 bg-purple-900/30 border border-purple-800 rounded-lg text-center">
+                  <Check size={24} className="mx-auto mb-2 text-purple-400" />
+                  <p className="text-purple-200 font-medium">This submission has been received.</p>
                 </div>
               </div>
             </div>

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     try {
       const cookieStore = cookies();
       const supabase = createRouteHandlerClient<Database>({ 
-        cookies: async () => cookieStore 
+        cookies: () => cookieStore 
       });
       
       // Exchange code for session
@@ -33,6 +33,16 @@ export async function GET(request: NextRequest) {
       }
       
       if (data?.session) {
+        // Update the profile's verified status
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ verified: true })
+          .eq('id', data.session.user.id);
+          
+        if (updateError) {
+          console.error('Error updating profile verification status:', updateError);
+        }
+        
         // Check if the user has a profile
         const userId = data.session.user.id;
         const { data: profileData, error: profileError } = await supabase
@@ -46,7 +56,6 @@ export async function GET(request: NextRequest) {
         }
         
         // If no profile exists, create one with basic info 
-        // (will be completed in the complete-profile page)
         if (!profileData) {
           const user = data.session.user;
           
@@ -62,6 +71,7 @@ export async function GET(request: NextRequest) {
             email: user.email,
             avatar_url: user.user_metadata?.avatar_url,
             created_at: new Date().toISOString(),
+            verified: true,
             okto_points: 0
           };
           

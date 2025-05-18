@@ -36,81 +36,83 @@ interface Project {
   budget: number;
 }
 
+interface Milestone {
+  id: string;
+  title: string;
+  description: string;
+  completed?: boolean | null;
+  completed_at?: string | null;
+  feedback?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  proposal_id: string;
+}
+
+interface ProjectWithMilestones {
+  id: string;
+  title: string;
+  lead: string;
+  team_size: number;
+  start_date: string;
+  status: 'active' | 'completed' | 'planned';
+  progress: number;
+  budget: number;
+  milestones: Milestone[];
+}
+
 export default function AdminProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithMilestones[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<keyof Project>('start_date');
+  const [sortField, setSortField] = useState<keyof ProjectWithMilestones>('start_date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
     const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        // For demo purposes, use mock data
-        const mockProjects: Project[] = [
-          {
-            id: '1',
-            title: 'Okto SDK Integration',
-            lead: 'Alex Johnson',
-            team_size: 4,
-            start_date: '2023-10-15',
-            status: 'active',
-            progress: 65,
-            budget: 12000,
-          },
-          {
-            id: '2',
-            title: 'Web3 Authentication Service',
-            lead: 'Maria Garcia',
-            team_size: 3,
-            start_date: '2023-09-01',
-            status: 'active',
-            progress: 80,
-            budget: 8500,
-          },
-          {
-            id: '3',
-            title: 'Smart Contract Auditing Tool',
-            lead: 'James Wilson',
-            team_size: 6,
-            start_date: '2023-11-05',
-            status: 'planned',
-            progress: 10,
-            budget: 15000,
-          },
-          {
-            id: '4',
-            title: 'Account Abstraction Wallet',
-            lead: 'Sarah Chen',
-            team_size: 5,
-            start_date: '2023-08-20',
-            status: 'completed',
-            progress: 100,
-            budget: 20000,
-          },
-          {
-            id: '5',
-            title: 'Cross-Chain Bridge Integration',
-            lead: 'Michael Okonjo',
-            team_size: 7,
-            start_date: '2023-10-10',
-            status: 'active',
-            progress: 45,
-            budget: 18000,
-          }
-        ];
-        
-        setProjects(mockProjects);
+      setLoading(true);
+      // Fetch all projects with related proposal title
+      let { data: projectsRaw, error } = await supabase
+        .from('projects')
+        .select('id, status, start_date, proposal_id, proposals(title)');
+      if (error || !projectsRaw) {
+        setProjects([]);
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-        setLoading(false);
+        return;
       }
+      // Fetch all milestones for these projects
+      const proposalIds = projectsRaw.map((p: any) => p.proposal_id).filter(Boolean);
+      let milestones: Milestone[] = [];
+      if (proposalIds.length > 0) {
+        const { data: milestonesRaw } = await supabase
+          .from('milestones')
+          .select('*')
+          .in('proposal_id', proposalIds);
+        milestones = (milestonesRaw as Milestone[]) || [];
+      }
+      // Map projects to include milestones and use proposal title
+      const projectsWithMilestones: ProjectWithMilestones[] = projectsRaw.map((p: any) => {
+        const title = p.proposals?.title || 'Untitled';
+        const milestonesForProject = milestones.filter(m => m.proposal_id === p.proposal_id);
+        const completedCount = milestonesForProject.filter(m => m.completed).length;
+        const totalCount = milestonesForProject.length;
+        const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+        return {
+          id: p.id,
+          title,
+          lead: 'Unknown', // Not fetched here
+          team_size: 1, // fallback
+          start_date: p.start_date,
+          status: p.status,
+          progress,
+          budget: 0,
+          milestones: milestonesForProject,
+        };
+      });
+      setProjects(projectsWithMilestones);
+      setLoading(false);
     };
-
     fetchProjects();
   }, [supabase]);
 
@@ -118,8 +120,7 @@ export default function AdminProjectsPage() {
   const filteredProjects = projects
     .filter(project => {
       // Apply search query filter
-      const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.lead.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase());
       
       // Apply status filter
       const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
@@ -133,7 +134,7 @@ export default function AdminProjectsPage() {
       return 0;
     });
 
-  const handleSort = (field: keyof Project) => {
+  const handleSort = (field: keyof ProjectWithMilestones) => {
     if (sortField === field) {
       // Toggle sort direction if clicking the same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -145,7 +146,7 @@ export default function AdminProjectsPage() {
   };
 
   // Helper function to get status badge color
-  const getStatusBadge = (status: Project['status']) => {
+  const getStatusBadge = (status: ProjectWithMilestones['status']) => {
     switch (status) {
       case 'active':
         return 'bg-green-500/20 text-green-400 border-green-500/30';
@@ -156,6 +157,40 @@ export default function AdminProjectsPage() {
       default:
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
+  };
+
+  // Approve milestone verification
+  const handleApprove = async (milestoneId: string) => {
+    await supabase
+      .from('milestones')
+      .update({ completed: true, completed_at: new Date().toISOString(), feedback: null })
+      .eq('id', milestoneId);
+    // Refresh projects
+    setProjects(projects =>
+      projects.map(project => ({
+        ...project,
+        milestones: project.milestones.map(m =>
+          m.id === milestoneId ? { ...m, completed: true, completed_at: new Date().toISOString(), feedback: null } : m
+        ),
+      }))
+    );
+  };
+
+  // Reject milestone verification
+  const handleReject = async (milestoneId: string) => {
+    await supabase
+      .from('milestones')
+      .update({ feedback: null }) // Reset verification request
+      .eq('id', milestoneId);
+    // Refresh projects
+    setProjects(projects =>
+      projects.map(project => ({
+        ...project,
+        milestones: project.milestones.map(m =>
+          m.id === milestoneId ? { ...m, feedback: null } : m
+        ),
+      }))
+    );
   };
 
   return (
@@ -214,104 +249,16 @@ export default function AdminProjectsPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-700 bg-gray-750">
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('title')}
-                  >
-                    Project Title
-                    {sortField === 'title' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('lead')}
-                  >
-                    Lead
-                    {sortField === 'lead' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('team_size')}
-                  >
-                    Team Size
-                    {sortField === 'team_size' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('start_date')}
-                  >
-                    Start Date
-                    {sortField === 'start_date' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('status')}
-                  >
-                    Status
-                    {sortField === 'status' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('progress')}
-                  >
-                    Progress
-                    {sortField === 'progress' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-3">
-                  <button 
-                    className="text-sm font-medium text-gray-300 flex items-center"
-                    onClick={() => handleSort('budget')}
-                  >
-                    Budget
-                    {sortField === 'budget' && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp size={14} className="ml-1" /> : 
-                        <ChevronDown size={14} className="ml-1" />
-                    )}
-                  </button>
-                </th>
+                <th className="px-6 py-3 text-sm font-medium text-gray-300">Project Title</th>
+                <th className="px-6 py-3 text-sm font-medium text-gray-300">Status</th>
+                <th className="px-6 py-3 text-sm font-medium text-gray-300">Progress</th>
                 <th className="px-6 py-3 text-sm font-medium text-gray-300">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
                       <span>Loading projects...</span>
@@ -320,7 +267,7 @@ export default function AdminProjectsPage() {
                 </tr>
               ) : filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
                     No projects found matching your criteria
                   </td>
                 </tr>
@@ -332,31 +279,9 @@ export default function AdminProjectsPage() {
                         {project.title}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      <div className="flex items-center">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center mr-2">
-                          <span className="text-white text-xs font-bold">
-                            {project.lead.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <span>{project.lead}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Users size={16} className="text-indigo-400 mr-2" />
-                        <span className="text-gray-300">{project.team_size}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Calendar size={16} className="text-blue-400 mr-2" />
-                        <span className="text-gray-300">{new Date(project.start_date).toLocaleDateString()}</span>
-                      </div>
-                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(project.status)}`}>
-                        {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                        {project.status?.charAt(0).toUpperCase() + project.status?.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -368,69 +293,16 @@ export default function AdminProjectsPage() {
                       </div>
                       <span className="text-xs text-gray-400 mt-1 block">{project.progress}%</span>
                     </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      ${project.budget.toLocaleString()}
-                    </td>
                     <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <button className="p-1.5 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors">
-                          <Cog size={16} className="text-gray-300" />
-                        </button>
-                        <Link href={`/admin/projects/${project.id}`} className="p-1.5 bg-blue-600/20 rounded-md hover:bg-blue-600/30 transition-colors">
-                          <BarChart3 size={16} className="text-blue-400" />
-                        </Link>
-                      </div>
+                      <Link href={`/admin/projects/${project.id}`} className="p-1.5 bg-blue-600/20 rounded-md hover:bg-blue-600/30 transition-colors">
+                        View
+                      </Link>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-      
-      {/* Project Metrics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Active Projects</p>
-              <h3 className="text-3xl font-bold text-white mt-1">
-                {projects.filter(p => p.status === 'active').length}
-              </h3>
-            </div>
-            <div className="bg-green-500/20 p-3 rounded-lg">
-              <Clock className="text-green-500" size={24} />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Completed Projects</p>
-              <h3 className="text-3xl font-bold text-white mt-1">
-                {projects.filter(p => p.status === 'completed').length}
-              </h3>
-            </div>
-            <div className="bg-blue-500/20 p-3 rounded-lg">
-              <CheckCircle className="text-blue-500" size={24} />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Total Budget</p>
-              <h3 className="text-3xl font-bold text-white mt-1">
-                ${projects.reduce((sum, p) => sum + p.budget, 0).toLocaleString()}
-              </h3>
-            </div>
-            <div className="bg-indigo-500/20 p-3 rounded-lg">
-              <BarChart3 className="text-indigo-500" size={24} />
-            </div>
-          </div>
         </div>
       </div>
     </>

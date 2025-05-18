@@ -45,6 +45,8 @@ export default function ProposalCard({ proposal, detailed = false }: ProposalCar
         return 'bg-red-900/60 text-red-300 border border-red-700/50';
       case 'completed':
         return 'bg-blue-900/60 text-blue-300 border border-blue-700/50';
+      case 'under_review':
+        return 'bg-blue-700/60 text-blue-200 border border-blue-400/50';
       default:
         return 'bg-gray-700/60 text-gray-300 border border-gray-600/50';
     }
@@ -94,7 +96,7 @@ export default function ProposalCard({ proposal, detailed = false }: ProposalCar
               </span>
               {proposal.status && (
                 <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${getStatusBadgeStyle(proposal.status)}`}>
-                  {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+                  {proposal.status === 'under_review' ? 'Under Review' : proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Unknown'}
                 </span>
               )}
               {proposal.fields && proposal.fields.length > 0 && (

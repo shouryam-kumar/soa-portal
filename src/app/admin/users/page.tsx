@@ -44,86 +44,28 @@ export default function AdminUsersPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
+    let subscription: any;
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        
-        // In a real app, this would fetch from Supabase
-        // For now, we'll use mock data
-        setTimeout(() => {
-          const mockUsers = [
-            {
-              id: 'u1',
-              username: 'alexj',
-              email: 'alex.johnson@example.com',
-              full_name: 'Alex Johnson',
-              avatar_url: 'https://i.pravatar.cc/150?u=1',
-              is_admin: false,
-              verified: true,
-              created_at: '2023-06-12T10:30:00Z',
-              last_sign_in: '2023-07-11T14:20:00Z'
-            },
-            {
-              id: 'u2',
-              username: 'sarahmiller',
-              email: 'sarah.miller@example.com',
-              full_name: 'Sarah Miller',
-              avatar_url: 'https://i.pravatar.cc/150?u=2',
-              is_admin: true,
-              verified: true,
-              created_at: '2023-05-05T08:45:00Z',
-              last_sign_in: '2023-07-11T09:15:00Z'
-            },
-            {
-              id: 'u3',
-              username: 'markw',
-              email: 'mark.williams@example.com',
-              full_name: 'Mark Williams',
-              avatar_url: 'https://i.pravatar.cc/150?u=3',
-              is_admin: false,
-              verified: true,
-              created_at: '2023-06-18T15:20:00Z',
-              last_sign_in: '2023-07-10T16:30:00Z'
-            },
-            {
-              id: 'u4',
-              username: 'jamielee',
-              email: 'jamie.lee@example.com',
-              full_name: 'Jamie Lee',
-              avatar_url: 'https://i.pravatar.cc/150?u=4',
-              is_admin: false,
-              verified: false,
-              created_at: '2023-07-02T11:10:00Z',
-              last_sign_in: '2023-07-05T12:40:00Z'
-            },
-            {
-              id: 'u5',
-              username: 'taylorchen',
-              email: 'taylor.chen@example.com',
-              full_name: 'Taylor Chen',
-              avatar_url: 'https://i.pravatar.cc/150?u=5',
-              is_admin: false,
-              verified: true,
-              created_at: '2023-06-25T09:30:00Z',
-              last_sign_in: '2023-07-08T18:15:00Z'
-            },
-            {
-              id: 'u6',
-              username: 'jordans',
-              email: 'jordan.smith@example.com',
-              full_name: 'Jordan Smith',
-              avatar_url: 'https://i.pravatar.cc/150?u=6',
-              is_admin: false,
-              verified: true,
-              created_at: '2023-05-17T13:25:00Z',
-              last_sign_in: '2023-07-09T10:05:00Z'
-            }
-          ] as UserProfile[];
-          
-          setUsers(mockUsers);
-          setLoading(false);
-        }, 800);
-        
+        // Fetch real users from Supabase
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+        if (error) throw error;
+        const mappedUsers = (data || []).map((u: any) => ({
+          id: u.id,
+          username: u.username || '',
+          email: u.email || '',
+          full_name: u.full_name || '',
+          avatar_url: u.avatar_url || '',
+          is_admin: !!u.is_admin,
+          verified: !!u.verified,
+          created_at: u.created_at || '',
+          last_sign_in: u.last_sign_in || '',
+        }));
+        setUsers(mappedUsers);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching users:', error);
         setLoading(false);
@@ -131,6 +73,58 @@ export default function AdminUsersPage() {
     };
 
     fetchUsers();
+
+    // Subscribe to real-time changes in the profiles table
+    subscription = supabase
+      .channel('realtime:profiles')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+        setUsers((prevUsers) => {
+          if (payload.eventType === 'INSERT') {
+            const u = payload.new;
+            return [
+              ...prevUsers,
+              {
+                id: u.id,
+                username: u.username || '',
+                email: u.email || '',
+                full_name: u.full_name || '',
+                avatar_url: u.avatar_url || '',
+                is_admin: !!u.is_admin,
+                verified: !!u.verified,
+                created_at: u.created_at || '',
+                last_sign_in: u.last_sign_in || '',
+              },
+            ];
+          } else if (payload.eventType === 'UPDATE') {
+            const u = payload.new;
+            return prevUsers.map((user) =>
+              user.id === u.id
+                ? {
+                    ...user,
+                    username: u.username || '',
+                    email: u.email || '',
+                    full_name: u.full_name || '',
+                    avatar_url: u.avatar_url || '',
+                    is_admin: !!u.is_admin,
+                    verified: !!u.verified,
+                    created_at: u.created_at || '',
+                    last_sign_in: u.last_sign_in || '',
+                  }
+                : user
+            );
+          } else if (payload.eventType === 'DELETE') {
+            return prevUsers.filter((user) => user.id !== payload.old.id);
+          }
+          return prevUsers;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
   }, [supabase]);
 
   // Filter users based on search and filter type

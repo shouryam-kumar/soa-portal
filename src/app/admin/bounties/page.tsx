@@ -414,7 +414,7 @@ export default function AdminBountiesPage() {
                 </div>
                 
                 {/* Create Bounty */}
-                <Link href="/admin/bounties/new">
+                <Link href="/admin/bounties/create">
                   <button className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 flex items-center text-sm">
                     <PlusCircle size={16} className="mr-2" />
                     Create Bounty

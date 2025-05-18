@@ -19,7 +19,7 @@ export default function AdminLoginPage() {
   
   // Check for error params
   useEffect(() => {
-    const errorType = searchParams.get('error');
+    const errorType = searchParams?.get('error');
     if (errorType) {
       switch (errorType) {
         case 'auth':

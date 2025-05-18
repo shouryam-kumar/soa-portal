@@ -27,8 +27,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         // Add a completion marker in the profile itself
-        profile_completed: true,
-        profile_completed_at: new Date().toISOString(),
+        profile_completed: true
       }, { onConflict: 'id' })
       .select()
       .single();

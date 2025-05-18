@@ -139,7 +139,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="flex min-h-screen bg-gray-900">
       {/* Sidebar for desktop */}
-      <div className="hidden md:block">
+      <div className="hidden md:block w-64 flex-shrink-0">
         <AdminSidebar />
       </div>
       
@@ -155,9 +155,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <span>Back to Main Site</span>
           </Link>
         </div>
-        
         {/* Add top padding to avoid overlap with the "Back to Main Site" button */}
-        <div className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
+        <div className="py-16 px-4 md:px-8">
           {children}
         </div>
       </div>

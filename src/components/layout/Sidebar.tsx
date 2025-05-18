@@ -59,6 +59,7 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
           .from('proposals')
           .select('id, title, status')
           .eq('creator_id', user.id)
+          .neq('type', 'bounty')
           .order('created_at', { ascending: false });
         
         if (error) {

@@ -38,7 +38,7 @@ export default function Header() {
   
   // Check for sign-out parameter to force refresh on sign-out
   useEffect(() => {
-    const signedOut = searchParams.get('signedout');
+    const signedOut = searchParams?.get('signedout');
     if (signedOut && session) {
       // Force a reload if we still have a session but the URL indicates we signed out
       window.location.reload();

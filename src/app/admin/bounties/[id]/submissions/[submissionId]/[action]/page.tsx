@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import React from 'react';
 
 interface SubmissionData {
   title: string;
@@ -17,15 +18,21 @@ interface SubmissionData {
 export default function AdminReviewPage({ 
   params 
 }: { 
-  params: { 
+  params: Promise<{ 
     id: string; 
     submissionId: string; 
     action: 'approve' | 'reject' 
-  } 
+  }> 
 }) {
+  // Unwrap params using React.use
+  const unwrappedParams = React.use(params);
+  const bountyId = unwrappedParams.id;
+  const submissionId = unwrappedParams.submissionId;
+  const action = unwrappedParams.action;
+  
   const router = useRouter();
   const supabase = createClientComponentClient();
-  const isApproving = params.action === 'approve';
+  const isApproving = action === 'approve';
   
   const [feedback, setFeedback] = useState('');
   const [pointsAwarded, setPointsAwarded] = useState<number | ''>('');
@@ -46,8 +53,8 @@ export default function AdminReviewPage({
             total_points
           )
         `)
-        .eq('id', params.submissionId)
-        .eq('bounty_id', params.id)
+        .eq('id', submissionId)
+        .eq('bounty_id', bountyId)
         .single();
       
       if (submissionError) {
@@ -95,7 +102,7 @@ export default function AdminReviewPage({
     };
     
     fetchSubmissionDetails();
-  }, [supabase, params.id, params.submissionId, isApproving]);
+  }, [supabase, bountyId, submissionId, isApproving]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +131,7 @@ export default function AdminReviewPage({
           feedback,
           points_awarded: isApproving ? Number(pointsAwarded) : 0,
         })
-        .eq('id', params.submissionId);
+        .eq('id', submissionId);
       
       if (updateError) throw updateError;
       
@@ -134,7 +141,7 @@ export default function AdminReviewPage({
         const { data: submission } = await supabase
           .from('bounty_submissions')
           .select('submitter_id')
-          .eq('id', params.submissionId)
+          .eq('id', submissionId)
           .single();
         
         if (submission) {
@@ -155,7 +162,7 @@ export default function AdminReviewPage({
       }
       
       // Redirect back to submission detail
-      router.push(`/admin/bounties/${params.id}/submissions/${params.submissionId}`);
+      router.push(`/admin/bounties/${bountyId}/submissions/${submissionId}`);
       router.refresh();
       
     } catch (error) {
@@ -169,7 +176,7 @@ export default function AdminReviewPage({
     <main className="flex-1 overflow-auto">
       <div className="container mx-auto px-6 py-8 max-w-2xl">
         <Link 
-          href={`/admin/bounties/${params.id}/submissions/${params.submissionId}`} 
+          href={`/admin/bounties/${bountyId}/submissions/${submissionId}`} 
           className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-6"
         >
           <ArrowLeft size={16} className="mr-1" />
@@ -240,7 +247,7 @@ export default function AdminReviewPage({
             )}
             
             <div className="flex justify-end pt-2">
-              <Link href={`/admin/bounties/${params.id}/submissions/${params.submissionId}`}>
+              <Link href={`/admin/bounties/${bountyId}/submissions/${submissionId}`}>
                 <button 
                   type="button"
                   className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-5 py-2.5 mr-3"

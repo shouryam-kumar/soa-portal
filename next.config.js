@@ -29,7 +29,7 @@ const nextConfig = {
   // Disable experimental features 
   experimental: {},
   // Webpack configuration
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // Suppress the punycode deprecation warning
     config.ignoreWarnings = [
       { module: /node_modules\/punycode/ }

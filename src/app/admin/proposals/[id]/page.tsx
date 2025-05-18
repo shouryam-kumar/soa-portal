@@ -21,20 +21,25 @@ import {
   FileEdit
 } from 'lucide-react';
 import React from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import type { Database } from '@/types/database.types';
+import ProposalComments from '@/components/proposals/ProposalComments';
+import { getProposalComments } from '@/lib/supabase';
 
 // Define types
 type Milestone = Database['public']['Tables']['milestones']['Row'];
-type Comment = {
+type ProposalComment = {
   id: string;
   content: string;
-  created_at: string;
+  created_at: string | null;
   user_id: string;
-  user_name: string;
-  user_avatar: string | null;
-  is_admin: boolean;
+  proposal_id?: string;
+  profiles?: {
+    id?: string;
+    username: string | null;
+    avatar_url: string | null;
+    is_admin: boolean | null;
+  };
 };
 
 type Proposal = Database['public']['Tables']['proposals']['Row'] & {
@@ -46,23 +51,25 @@ type Proposal = Database['public']['Tables']['proposals']['Row'] & {
     wallet_address: string | null;
   } | null;
   milestones: Milestone[];
-  comments?: Comment[];
+  comments?: ProposalComment[];
 };
 
 // Use a more specific type for params
 type PageParams = {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 };
 
 export default function AdminProposalDetail({ params }: PageParams) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const action = searchParams.get('action');
+  const action = searchParams?.get('action');
   
-  // Safely access the id directly since we've properly typed it
-  const proposalId = params.id;
+  // Unwrap params using React.use
+  const unwrappedParams = React.use(params);
+  // Safely access the id
+  const proposalId = unwrappedParams.id;
   
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,9 +78,7 @@ export default function AdminProposalDetail({ params }: PageParams) {
   const [showRejectModal, setShowRejectModal] = useState(action === 'reject');
   const [showUnderReviewModal, setShowUnderReviewModal] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
+  const [comments, setComments] = useState<ProposalComment[]>([]);
   
   const supabase = createClientComponentClient<Database>();
   
@@ -97,39 +102,9 @@ export default function AdminProposalDetail({ params }: PageParams) {
       } else if (data) {
         setProposal(data);
         
-        // Fetch comments (in a real app, these would come from a comments table)
-        // This is a mock implementation
-        const mockComments: Comment[] = [
-          {
-            id: '1',
-            content: 'I like the overall concept, but could you provide more details about the implementation strategy?',
-            created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-            user_id: 'admin1',
-            user_name: 'Admin User',
-            user_avatar: null,
-            is_admin: true
-          },
-          {
-            id: '2',
-            content: 'Thanks for the feedback! I\'ve updated the proposal with more technical details in the implementation section.',
-            created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            user_id: data.creator_id,
-            user_name: data.profiles?.username || 'User',
-            user_avatar: data.profiles?.avatar_url || null,
-            is_admin: false
-          },
-          {
-            id: '3',
-            content: 'The updates look good. I have one more question about the milestone deadlines - are they flexible?',
-            created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-            user_id: 'admin1',
-            user_name: 'Admin User',
-            user_avatar: null,
-            is_admin: true
-          }
-        ];
-        
-        setComments(mockComments);
+        // Fetch real comments from database
+        const fetchedComments = await getProposalComments(proposalId);
+        setComments(fetchedComments || []);
       }
       
       setLoading(false);
@@ -192,17 +167,8 @@ export default function AdminProposalDetail({ params }: PageParams) {
                           newStatus === 'rejected' ? 'rejected' : 
                           'marked for review';
         
-        const newAdminComment: Comment = {
-          id: Date.now().toString(),
-          content: `[Status Update] This proposal has been ${actionText}.\n\nFeedback: ${feedback}`,
-          created_at: new Date().toISOString(),
-          user_id: 'admin1',
-          user_name: 'Admin User',
-          user_avatar: null,
-          is_admin: true
-        };
-        
-        setComments(prev => [...prev, newAdminComment]);
+        // This is now handled by the ProposalComments component, so we can remove this
+        // code or leave it commented out for now
       }
       
       // Update local state
@@ -213,31 +179,6 @@ export default function AdminProposalDetail({ params }: PageParams) {
     }
     
     setStatusLoading(false);
-  };
-  
-  // Handle comment submission
-  const handleCommentSubmit = () => {
-    if (!newComment.trim() || !proposal) return;
-    
-    setSubmittingComment(true);
-    
-    // In a real app, you would save the comment to your database
-    // This is a mock implementation
-    setTimeout(() => {
-      const adminComment: Comment = {
-        id: Date.now().toString(),
-        content: newComment,
-        created_at: new Date().toISOString(),
-        user_id: 'admin1',
-        user_name: 'Admin User',
-        user_avatar: null,
-        is_admin: true
-      };
-      
-      setComments(prev => [...prev, adminComment]);
-      setNewComment('');
-      setSubmittingComment(false);
-    }, 500);
   };
   
   // Get status badge style
@@ -266,7 +207,6 @@ export default function AdminProposalDetail({ params }: PageParams) {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-900 text-white">
-        <AdminSidebar />
         <div className="flex-1 flex flex-col">
           <AdminHeader title="Proposal Details" />
           <main className="flex-1 p-6 flex items-center justify-center">
@@ -283,7 +223,6 @@ export default function AdminProposalDetail({ params }: PageParams) {
   if (!proposal) {
     return (
       <div className="flex min-h-screen bg-gray-900 text-white">
-        <AdminSidebar />
         <div className="flex-1 flex flex-col">
           <AdminHeader title="Proposal Details" />
           <main className="flex-1 p-6 flex items-center justify-center">
@@ -305,8 +244,6 @@ export default function AdminProposalDetail({ params }: PageParams) {
   
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
-      <AdminSidebar />
-      
       <div className="flex-1 flex flex-col">
         <AdminHeader title="Proposal Details" />
         
@@ -477,105 +414,23 @@ export default function AdminProposalDetail({ params }: PageParams) {
               </div>
               
               {/* Comments Section */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-lg font-bold mb-4">Discussion ({comments.length})</h2>
-                
-                <div className="space-y-4 mb-6">
-                  {comments.map((comment) => (
-                    <div 
-                      key={comment.id} 
-                      className={`p-4 rounded-lg ${
-                        comment.is_admin ? 'bg-blue-900/20 border border-blue-900/50' : 'bg-gray-750 border border-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          comment.is_admin ? 'bg-blue-600' : 'bg-purple-600'
-                        }`}>
-                          {comment.user_avatar ? (
-                            <Image 
-                              src={comment.user_avatar} 
-                              alt={comment.user_name} 
-                              width={40} 
-                              height={40} 
-                              className="rounded-full" 
-                            />
-                          ) : (
-                            <span className="text-white font-medium">
-                              {comment.user_name.substring(0, 2).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium flex items-center">
-                                {comment.user_name}
-                                {comment.is_admin && (
-                                  <span className="ml-2 bg-blue-900/50 text-blue-300 text-xs px-2 py-0.5 rounded-full">
-                                    Admin
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-gray-400 text-xs">
-                                {formatDate(comment.created_at)}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-2 text-gray-300 whitespace-pre-line">
-                            {comment.content}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Comment Form */}
-                <div className="bg-gray-750 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium mb-3">Add Comment</h3>
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Write your comment here..."
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-24"
-                  ></textarea>
-                  
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleCommentSubmit}
-                      disabled={!newComment.trim() || submittingComment}
-                      className={`flex items-center bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 transition-colors ${
-                        (!newComment.trim() || submittingComment) ? 'opacity-70 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      {submittingComment ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Send size={16} className="mr-2" />
-                          Post Comment
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Review Feedback (if rejected or approved) */}
-              {(proposal.status === 'rejected' || proposal.status === 'approved') && proposal.review_feedback && (
-                <div className={`bg-${proposal.status === 'rejected' ? 'red' : 'green'}-900/30 border border-${proposal.status === 'rejected' ? 'red' : 'green'}-900 rounded-lg p-6`}>
-                  <h2 className="text-lg font-bold mb-3 flex items-center">
-                    <MessageCircle size={18} className="mr-2" />
-                    {proposal.status === 'rejected' ? 'Rejection' : 'Approval'} Feedback
-                  </h2>
-                  <p className="text-gray-300 whitespace-pre-line">{proposal.review_feedback}</p>
-                </div>
+              {!loading && proposal && (
+                <ProposalComments
+                  proposalId={proposalId}
+                  initialComments={comments.map(comment => ({
+                    ...comment,
+                    created_at: comment.created_at || new Date().toISOString(),
+                    profiles: comment.profiles ? {
+                      username: comment.profiles.username || 'Unknown User',
+                      avatar_url: comment.profiles.avatar_url,
+                      is_admin: !!comment.profiles.is_admin
+                    } : {
+                      username: 'Unknown User',
+                      avatar_url: null,
+                      is_admin: false
+                    }
+                  }))}
+                />
               )}
             </div>
             
@@ -670,12 +525,14 @@ export default function AdminProposalDetail({ params }: PageParams) {
                 <h2 className="text-lg font-bold mb-4">Quick Actions</h2>
                 
                 <div className="space-y-3">
-                  <Link href={`/admin/proposals/${proposal.id}/edit`}>
-                    <button className="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 text-sm flex items-center justify-center">
-                      <FileEdit size={16} className="mr-2" />
-                      Edit Proposal
-                    </button>
-                  </Link>
+                  {proposal.status !== 'under_review' && proposal.status !== 'approved' && proposal.status !== 'rejected' && (
+                    <Link href={`/admin/proposals/${proposal.id}/edit`}>
+                      <button className="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 text-sm flex items-center justify-center">
+                        <FileEdit size={16} className="mr-2" />
+                        Edit Proposal
+                      </button>
+                    </Link>
+                  )}
                   
                   {proposal.status === 'approved' && (
                     <Link href={`/admin/projects?proposal=${proposal.id}`}>

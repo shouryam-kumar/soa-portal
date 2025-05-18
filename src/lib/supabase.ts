@@ -208,30 +208,59 @@ export const createProposal = async (proposalData: any) => {
 // Helper function to update a proposal
 export const updateProposal = async (id: string, proposalData: any) => {
   const supabase = createClient();
+  
+  console.log('Starting proposal update for ID:', id);
+  console.log('Update data:', proposalData);
+  
+  // First check if proposal exists
+  const { data: existingProposal, error: checkError } = await supabase
+    .from('proposals')
+    .select('id')
+    .eq('id', id)
+    .single();
+
+  if (checkError) {
+    console.error('Error checking proposal:', checkError);
+    throw new Error('Proposal not found');
+  }
+
+  console.log('Found existing proposal:', existingProposal);
+
+  // Then perform the update
+  const updatePayload = {
+    title: proposalData.title,
+    short_description: proposalData.shortDescription,
+    description: proposalData.description,
+    type: proposalData.type,
+    fields: proposalData.fields,
+    skills_required: proposalData.skillsRequired,
+    total_points: proposalData.totalPoints,
+    status: proposalData.status,
+    review_feedback: proposalData.reviewFeedback,
+    updated_at: new Date().toISOString()
+  };
+
+  console.log('Update payload:', updatePayload);
+
   const { data, error } = await supabase
     .from('proposals')
-    .update({
-      title: proposalData.title,
-      short_description: proposalData.shortDescription,
-      description: proposalData.description,
-      type: proposalData.type,
-      fields: proposalData.fields,
-      skills_required: proposalData.skillsRequired,
-      total_points: proposalData.totalPoints,
-      status: proposalData.status,
-      review_feedback: proposalData.reviewFeedback,
-      updated_at: new Date().toISOString()
-    })
+    .update(updatePayload)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
 
   if (error) {
     console.error('Error updating proposal:', error);
     throw error;
   }
 
-  return data;
+  console.log('Update response:', { data, error });
+
+  if (!data || data.length === 0) {
+    console.error('Update returned no data:', { id, updatePayload });
+    throw new Error('Failed to update proposal');
+  }
+
+  return data[0];
 };
 
 // Helper function to change proposal status

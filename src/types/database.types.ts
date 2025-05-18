@@ -68,13 +68,15 @@ export interface Database {
           created_at: string | null
           full_name: string | null
           id: string
-          is_admin: boolean | null  // Added is_admin field
+          is_admin: boolean | null
           okto_points: number | null
           role: string | null
           skills: string[] | null
           updated_at: string | null
           username: string | null
           wallet_address: string | null
+          profile_completed: boolean | null
+          verified: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -82,13 +84,15 @@ export interface Database {
           created_at?: string | null
           full_name?: string | null
           id: string
-          is_admin?: boolean | null  // Added is_admin field
+          is_admin?: boolean | null
           okto_points?: number | null
           role?: string | null
           skills?: string[] | null
           updated_at?: string | null
           username?: string | null
           wallet_address?: string | null
+          profile_completed?: boolean | null
+          verified?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -96,13 +100,15 @@ export interface Database {
           created_at?: string | null
           full_name?: string | null
           id?: string
-          is_admin?: boolean | null  // Added is_admin field
+          is_admin?: boolean | null
           okto_points?: number | null
           role?: string | null
           skills?: string[] | null
           updated_at?: string | null
           username?: string | null
           wallet_address?: string | null
+          profile_completed?: boolean | null
+          verified?: boolean | null
         }
         Relationships: [
           {
@@ -254,6 +260,7 @@ export interface Database {
           total_points: number
           type: string
           updated_at: string | null
+          deadline: string | null
         }
         Insert: {
           created_at?: string | null
@@ -269,6 +276,7 @@ export interface Database {
           total_points: number
           type: string
           updated_at?: string | null
+          deadline?: string | null
         }
         Update: {
           created_at?: string | null
@@ -284,6 +292,7 @@ export interface Database {
           total_points?: number
           type?: string
           updated_at?: string | null
+          deadline?: string | null
         }
         Relationships: [
           {
@@ -463,6 +472,64 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      }
+      bounty_submissions: {
+        Row: {
+          id: string;
+          bounty_id: string;
+          submitter_id: string;
+          title: string;
+          description: string;
+          submission_url: string | null;
+          submission_text: string | null;
+          status: string;
+          points_awarded: number | null;
+          feedback: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          bounty_id: string;
+          submitter_id: string;
+          title: string;
+          description: string;
+          submission_url?: string | null;
+          submission_text?: string | null;
+          status?: string;
+          points_awarded?: number | null;
+          feedback?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          bounty_id?: string;
+          submitter_id?: string;
+          title?: string;
+          description?: string;
+          submission_url?: string | null;
+          submission_text?: string | null;
+          status?: string;
+          points_awarded?: number | null;
+          feedback?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bounty_submissions_bounty_id_fkey";
+            columns: ["bounty_id"];
+            referencedRelation: "proposals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bounty_submissions_submitter_id_fkey";
+            columns: ["submitter_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
       }
     }
     Views: {

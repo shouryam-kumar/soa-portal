@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Settings, Lock, Bell, Database, Mail, Shield } from 'lucide-react';
 
@@ -10,6 +10,7 @@ const AdminHeader = dynamic(() => import('@/components/admin/AdminHeader'), {
 });
 
 export default function AdminSettingsPage() {
+  const [dataRetention, setDataRetention] = useState('1 Year');
   return (
     <div className="min-h-screen bg-gray-900">
       <AdminHeader title="Admin Settings" />
@@ -117,11 +118,15 @@ export default function AdminSettingsPage() {
                     <Database size={18} className="text-gray-400 mr-2" />
                     <span className="text-white">Data Retention</span>
                   </div>
-                  <select className="bg-gray-700 border border-gray-600 text-white rounded px-2 py-1 text-sm">
-                    <option>30 Days</option>
-                    <option>90 Days</option>
-                    <option selected>1 Year</option>
-                    <option>Forever</option>
+                  <select
+                    className="bg-gray-700 border border-gray-600 text-white rounded px-2 py-1 text-sm"
+                    value={dataRetention}
+                    onChange={e => setDataRetention(e.target.value)}
+                  >
+                    <option value="30 Days">30 Days</option>
+                    <option value="90 Days">90 Days</option>
+                    <option value="1 Year">1 Year</option>
+                    <option value="Forever">Forever</option>
                   </select>
                 </div>
               </div>

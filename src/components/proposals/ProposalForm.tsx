@@ -13,17 +13,32 @@ interface Milestone {
   deadline: string;
 }
 
-export default function ProposalForm() {
+interface ProposalFormProps {
+  initialValues?: {
+    title: string;
+    shortDescription: string;
+    description: string;
+    type: string;
+    fields: string[];
+    skills: string[];
+    totalPoints: number;
+    milestones: Milestone[];
+  };
+  onSubmit?: (data: any) => Promise<void>;
+  editMode?: boolean;
+}
+
+export default function ProposalForm({ initialValues, onSubmit, editMode = false }: ProposalFormProps) {
   const router = useRouter();
-  const [title, setTitle] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState('project');
-  const [fields, setFields] = useState<string[]>([]);
-  const [skills, setSkills] = useState<string[]>([]);
+  const [title, setTitle] = useState(initialValues?.title || '');
+  const [shortDescription, setShortDescription] = useState(initialValues?.shortDescription || '');
+  const [description, setDescription] = useState(initialValues?.description || '');
+  const [type, setType] = useState(initialValues?.type || 'project');
+  const [fields, setFields] = useState<string[]>(initialValues?.fields || []);
+  const [skills, setSkills] = useState<string[]>(initialValues?.skills || []);
   const [skillInput, setSkillInput] = useState('');
-  const [totalPoints, setTotalPoints] = useState(0);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [totalPoints, setTotalPoints] = useState(initialValues?.totalPoints || 0);
+  const [milestones, setMilestones] = useState<Milestone[]>(initialValues?.milestones || []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -156,9 +171,7 @@ export default function ProposalForm() {
     if (!validateStep(step)) {
       return;
     }
-    
     setIsSubmitting(true);
-    
     try {
       // Prepare milestone data
       const milestonesData = milestones.map(m => ({
@@ -167,8 +180,7 @@ export default function ProposalForm() {
         points_allocated: m.points_allocated,
         deadline: m.deadline,
       }));
-      
-      // Submit proposal
+      // Prepare proposal data
       const proposalData = {
         title,
         shortDescription,
@@ -180,12 +192,13 @@ export default function ProposalForm() {
         milestones: milestonesData,
         status: asDraft ? 'draft' : 'submitted'
       };
-      
-      await createProposal(proposalData);
-      
-      // Redirect to proposals page
-      router.push('/proposals');
-      router.refresh();
+      if (onSubmit) {
+        await onSubmit(proposalData);
+      } else {
+        await createProposal(proposalData);
+        router.push('/proposals');
+        router.refresh();
+      }
     } catch (error) {
       console.error('Error submitting proposal:', error);
       setErrors({ submit: 'Failed to submit proposal. Please try again.' });
@@ -204,7 +217,7 @@ export default function ProposalForm() {
       
       <div className="mb-8">
         <div className="flex justify-between mb-6">
-          <h1 className="text-2xl font-bold">Create New Proposal</h1>
+          <h1 className="text-2xl font-bold">{editMode ? 'Edit Proposal' : 'Create New Proposal'}</h1>
           <div className="flex space-x-2">
             <span className={`w-3 h-3 rounded-full ${step >= 1 ? 'bg-blue-500' : 'bg-gray-600'}`}></span>
             <span className={`w-3 h-3 rounded-full ${step >= 2 ? 'bg-blue-500' : 'bg-gray-600'}`}></span>
@@ -542,12 +555,10 @@ export default function ProposalForm() {
               type="button"
               onClick={() => handleSubmit(false)}
               disabled={isSubmitting}
-              className={`flex items-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2 ${
-                isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
+              className={`flex items-center ${editMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg px-6 py-2 ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
               <Send size={18} className="mr-2" />
-              {isSubmitting ? 'Submitting...' : 'Submit Proposal'}
+              {isSubmitting ? (editMode ? 'Saving...' : 'Submitting...') : (editMode ? 'Save Changes' : 'Submit Proposal')}
             </button>
           )}
         </div>
