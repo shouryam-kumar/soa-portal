@@ -49,7 +49,8 @@ export async function GET(request: Request) {
             id: user.id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            email: user.email
+            email: user.email,
+            avatar_url: user.user_metadata?.avatar_url
           })
           .select()
           .single();

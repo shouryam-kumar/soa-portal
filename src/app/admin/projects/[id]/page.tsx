@@ -17,7 +17,7 @@ export default async function AdminProjectDetailPage({ params }: { params: { id:
   // Fetch proposal for the project
   const { data: proposal } = await supabase
     .from('proposals')
-    .select('title')
+    .select('title, status')
     .eq('id', project.proposal_id)
     .single();
 
@@ -33,10 +33,31 @@ export default async function AdminProjectDetailPage({ params }: { params: { id:
   const completedCount = milestones.filter((m: any) => m.completed).length;
   const progress = totalMilestones > 0 ? Math.round((completedCount / totalMilestones) * 100) : 0;
 
+  // Determine status badge style
+  const getStatusBadgeStyle = (status: string | null | undefined) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-900 text-green-300';
+      case 'submitted':
+        return 'bg-yellow-900 text-yellow-300';
+      case 'rejected':
+        return 'bg-red-900 text-red-300';
+      case 'completed': // Treat completed as approved for project badges
+      case 'approved':
+        return 'bg-green-900 text-green-300';
+      case 'under_review':
+        return 'bg-blue-700 text-blue-200';
+      default:
+        return 'bg-gray-700 text-gray-300';
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto py-10">
       <h1 className="text-2xl font-bold mb-4">{proposal?.title || 'Untitled Project'}</h1>
-      <div className="mb-4 text-gray-400">Status: {project.status}</div>
+      <span className={`text-xs px-2 py-1 rounded-lg ${getStatusBadgeStyle(proposal?.status)}`}>
+        {proposal?.status === 'approved' ? 'Approved' : proposal?.status === 'completed' ? 'Completed' : proposal?.status === 'under_review' ? 'Under Review' : proposal?.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Unknown'}
+      </span>
       <div className="mb-4 text-gray-400">Start Date: {project.start_date}</div>
       <div className="mb-4 text-gray-400">Progress: {progress}%</div>
       <div className="w-full bg-gray-700 rounded-full h-2 mb-8">

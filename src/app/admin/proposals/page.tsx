@@ -191,6 +191,17 @@ export default function AdminProposalsPage() {
         // Continue even if project creation fails
       }
       
+      // *** Add this step: Explicitly set proposal status to 'approved' again ***
+      const { error: statusUpdateError } = await supabase
+        .from('proposals')
+        .update({ status: 'approved', updated_at: new Date().toISOString() })
+        .eq('id', selectedProposal.id);
+
+      if (statusUpdateError) {
+        console.error('Error re-setting proposal status after project creation:', statusUpdateError);
+        // Log the error but continue, as project creation might have succeeded
+      }
+      
       // Update local state
       setProposals(proposals.map(p => 
         p.id === selectedProposal.id ? { ...p, status: 'approved' } : p

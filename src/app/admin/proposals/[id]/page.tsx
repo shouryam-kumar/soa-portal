@@ -150,6 +150,17 @@ export default function AdminProposalDetail({ params }: PageParams) {
         } catch (error) {
           console.error('Error creating project:', error);
         }
+        
+        // *** Add this step: Explicitly set proposal status to 'approved' again ***
+        const { error: statusUpdateError } = await supabase
+          .from('proposals')
+          .update({ status: 'approved', updated_at: new Date().toISOString() })
+          .eq('id', proposal.id);
+
+        if (statusUpdateError) {
+          console.error('Error re-setting proposal status after project creation:', statusUpdateError);
+          // Log the error but continue
+        }
       }
       
       // Reset UI state
@@ -526,12 +537,12 @@ export default function AdminProposalDetail({ params }: PageParams) {
                 
                 <div className="space-y-3">
                   {proposal.status !== 'under_review' && proposal.status !== 'approved' && proposal.status !== 'rejected' && (
-                    <Link href={`/admin/proposals/${proposal.id}/edit`}>
-                      <button className="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 text-sm flex items-center justify-center">
-                        <FileEdit size={16} className="mr-2" />
-                        Edit Proposal
-                      </button>
-                    </Link>
+                  <Link href={`/admin/proposals/${proposal.id}/edit`}>
+                    <button className="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 text-sm flex items-center justify-center">
+                      <FileEdit size={16} className="mr-2" />
+                      Edit Proposal
+                    </button>
+                  </Link>
                   )}
                   
                   {proposal.status === 'approved' && (

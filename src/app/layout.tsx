@@ -27,7 +27,7 @@ export default async function RootLayout({
         <SupabaseProvider session={session}>
           <div className="flex flex-col min-h-screen">
             <Header />
-            {children}
+                {children}
           </div>
         </SupabaseProvider>
       </body>

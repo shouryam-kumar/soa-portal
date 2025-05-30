@@ -230,6 +230,7 @@ function CompleteProfile() {
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                   username: session.user.email?.split('@')[0] || `user_${Date.now().toString().slice(-6)}`,
+                  avatar_url: session.user.user_metadata?.avatar_url
                 }, { onConflict: 'id' });
               
               setIsLoading(false);
@@ -284,6 +285,7 @@ function CompleteProfile() {
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                   username: session.user.email?.split('@')[0] || `user_${Date.now().toString().slice(-6)}`,
+                  avatar_url: session.user.user_metadata?.avatar_url
                 }, { onConflict: 'id' });
                 
               // Don't wait for auth system, just set values directly
@@ -324,6 +326,7 @@ function CompleteProfile() {
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 username: session.user.email?.split('@')[0] || `user_${Date.now().toString().slice(-6)}`,
+                avatar_url: session.user.user_metadata?.avatar_url
               }, { onConflict: 'id' });
               
             if (insertError) {

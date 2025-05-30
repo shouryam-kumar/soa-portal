@@ -52,6 +52,12 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
   // Get comments for the proposal
   const comments = await getProposalComments(proposalId);
 
+  // Log comments data to inspect profile information
+  console.log('Fetched comments:', comments);
+  comments.forEach(comment => {
+    console.log('Comment user_id:', comment.user_id, 'Profiles:', comment.profiles);
+  });
+
   // Get current user to determine if they can approve/reject
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
@@ -223,7 +229,19 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
               {/* Comments Section */}
               <ProposalComments 
                 proposalId={proposalId} 
-                initialComments={comments} 
+                initialComments={comments.map(comment => ({
+                  ...comment,
+                  created_at: comment.created_at || new Date().toISOString(),
+                  profiles: comment.profiles ? {
+                    username: comment.profiles.username || 'Unknown User',
+                    avatar_url: comment.profiles.avatar_url,
+                    is_admin: !!comment.profiles.is_admin
+                  } : {
+                    username: 'Unknown User',
+                    avatar_url: null,
+                    is_admin: false
+                  }
+                }))} 
               />
               
               {/* Review Feedback (if rejected) */}

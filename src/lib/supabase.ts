@@ -228,16 +228,16 @@ export const updateProposal = async (id: string, proposalData: any) => {
 
   // Then perform the update
   const updatePayload = {
-    title: proposalData.title,
-    short_description: proposalData.shortDescription,
-    description: proposalData.description,
-    type: proposalData.type,
-    fields: proposalData.fields,
-    skills_required: proposalData.skillsRequired,
-    total_points: proposalData.totalPoints,
-    status: proposalData.status,
-    review_feedback: proposalData.reviewFeedback,
-    updated_at: new Date().toISOString()
+      title: proposalData.title,
+      short_description: proposalData.shortDescription,
+      description: proposalData.description,
+      type: proposalData.type,
+      fields: proposalData.fields,
+      skills_required: proposalData.skillsRequired,
+      total_points: proposalData.totalPoints,
+      status: proposalData.status,
+      review_feedback: proposalData.reviewFeedback,
+      updated_at: new Date().toISOString()
   };
 
   console.log('Update payload:', updatePayload);
@@ -299,6 +299,31 @@ export const changeProposalStatus = async (id: string, status: string, feedback?
   return data;
 };
 
+// Helper function to get comments for a proposal
+export const getProposalComments = async (proposalId: string) => {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('proposal_comments')
+    .select(`
+      *,
+      profiles(
+        id,
+        username,
+        avatar_url,
+        is_admin
+      )
+    `)
+    .eq('proposal_id', proposalId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching comments:', error);
+    return [];
+  }
+
+  return data;
+};
+
 // Helper function to add a comment to a proposal
 export const addProposalComment = async (proposalId: string, content: string) => {
   const supabase = createClient();
@@ -315,32 +340,20 @@ export const addProposalComment = async (proposalId: string, content: string) =>
       user_id: userData.user.id,
       content
     })
-    .select()
+    .select(`
+      *,
+      profiles(
+        id,
+        username,
+        avatar_url,
+        is_admin
+      )
+    `)
     .single();
 
   if (error) {
     console.error('Error adding comment:', error);
     throw error;
-  }
-
-  return data;
-};
-
-// Helper function to get comments for a proposal
-export const getProposalComments = async (proposalId: string) => {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('proposal_comments')
-    .select(`
-      *,
-      profiles:user_id(id, username, avatar_url, is_admin)
-    `)
-    .eq('proposal_id', proposalId)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching comments:', error);
-    return [];
   }
 
   return data;

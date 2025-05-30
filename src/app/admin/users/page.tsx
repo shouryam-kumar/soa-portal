@@ -65,7 +65,7 @@ export default function AdminUsersPage() {
           last_sign_in: u.last_sign_in || '',
         }));
         setUsers(mappedUsers);
-        setLoading(false);
+          setLoading(false);
       } catch (error) {
         console.error('Error fetching users:', error);
         setLoading(false);

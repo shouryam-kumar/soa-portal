@@ -13,9 +13,10 @@ type Comment = {
   user_id: string;
   proposal_id?: string;
   profiles?: {
+    id?: string;
     username: string | null;
     avatar_url: string | null;
-    is_admin: boolean;
+    is_admin: boolean | null;
   };
 };
 
@@ -51,8 +52,7 @@ export default function ProposalComments({ proposalId, initialComments }: Propos
     try {
       const commentData = await addProposalComment(proposalId, newComment);
       
-      // Add the comment to our state
-      // Cast the comment data to ensure it matches our Comment type
+      // Add the comment to our state with profile information
       setComments(prev => [
         ...prev, 
         {
@@ -60,7 +60,8 @@ export default function ProposalComments({ proposalId, initialComments }: Propos
           content: commentData.content,
           created_at: commentData.created_at || new Date().toISOString(),
           user_id: commentData.user_id,
-          proposal_id: commentData.proposal_id
+          proposal_id: commentData.proposal_id,
+          profiles: commentData.profiles
         }
       ]);
       

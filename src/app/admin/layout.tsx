@@ -80,11 +80,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         // Check if this user is an admin
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, is_admin')
           .eq('id', session.user.id)
           .single();
           
-        const isAdmin = profile?.role === 'admin';
+        const isAdmin = profile?.role === 'admin' || !!profile?.is_admin;
         
         if (!isAdmin) {
           // Not an admin, redirect to home

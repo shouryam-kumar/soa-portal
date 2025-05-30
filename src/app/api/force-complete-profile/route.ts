@@ -48,7 +48,8 @@ export async function GET() {
           full_name: username, // Use username as fallback full name
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          email: user.email
+          email: user.email,
+          avatar_url: user.user_metadata?.avatar_url // Add avatar URL from user metadata
         })
         .select()
         .single();

@@ -195,9 +195,9 @@ export default function ProposalForm({ initialValues, onSubmit, editMode = false
       if (onSubmit) {
         await onSubmit(proposalData);
       } else {
-        await createProposal(proposalData);
-        router.push('/proposals');
-        router.refresh();
+      await createProposal(proposalData);
+      router.push('/proposals');
+      router.refresh();
       }
     } catch (error) {
       console.error('Error submitting proposal:', error);

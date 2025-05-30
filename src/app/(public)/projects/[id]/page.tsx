@@ -16,7 +16,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .from('projects')
     .select(`
       *,
-      proposals(*),
+      proposals(id, title, status),
       profiles:leader_id(id, username, avatar_url),
       project_members(
         profiles:user_id(id, username, avatar_url)
@@ -82,6 +82,25 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     return 'Pending';
   };
 
+  // Determine status badge style
+  const getStatusBadgeStyle = (status: string | null) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-900 text-green-300';
+      case 'submitted':
+        return 'bg-yellow-900 text-yellow-300';
+      case 'rejected':
+        return 'bg-red-900 text-red-300';
+      case 'completed': // Treat completed as approved for project badges
+      case 'approved':
+        return 'bg-green-900 text-green-300';
+      case 'under_review':
+        return 'bg-blue-700 text-blue-200';
+      default:
+        return 'bg-gray-700 text-gray-300';
+    }
+  };
+
   return (
     <main className="flex-1 overflow-auto">
       <div className="container mx-auto px-6 py-8">
@@ -94,16 +113,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <div className="p-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
               <div className="flex-1">
-                <span className={`text-xs px-2 py-1 rounded-lg ${
-                  project.status === 'active' ? 'bg-green-900 text-green-300' :
-                  project.status === 'completed' ? 'bg-blue-900 text-blue-300' :
-                  'bg-gray-700 text-gray-300'
-                }`}>
-                  {project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : 'Unknown Status'}
-                </span>
                 
                 <h1 className="text-2xl font-bold mt-4 mb-4">{projectTitle}</h1>
-                
+                <span className={`text-xs px-2 py-1 rounded-lg ${getStatusBadgeStyle(project.status)}`}>
+                  {project.status === 'approved' ? 'Approved' : project.status === 'completed' ? 'Completed' : project.status === 'under_review' ? 'Under Review' : project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : 'Unknown'}
+                </span>
                 <p className="text-gray-300 mb-6">{projectDescription}</p>
 
                 <div className="flex flex-wrap gap-6 text-sm text-gray-400 mb-6">
